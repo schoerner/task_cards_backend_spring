@@ -1,7 +1,6 @@
 package de.acosci.tasks.controller.rest;
 
 import de.acosci.tasks.model.Task;
-import de.acosci.tasks.model.User;
 import de.acosci.tasks.service.TaskService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -36,19 +35,19 @@ public class TaskRestController {
         return taskService.getTaskByID(id);
     }
 
-    @PostMapping("/add")
+    @PostMapping
     public Task saveNewTask(@RequestBody Task newTask) {
         System.out.println("post mapping reached");
         return taskService.saveTask(newTask);
     }
 
-    @PutMapping("/edit/{id}")
-    public Task updateTaskByID(@RequestBody Task taskToBeUpdated, @PathVariable Long id) {
+    @PutMapping
+    public Task updateTaskByID(@RequestBody Task taskToBeUpdated) {
         System.out.println("put mapping reached");
         return taskService.saveTask(taskToBeUpdated);
     }
 
-    @DeleteMapping("/delete/{id}")
+    @DeleteMapping("/{id}")
     public void deleteTaskByID(@PathVariable Long id) {
         System.out.println("delete mapping reached");
         taskService.deleteTaskByID(id);
