@@ -1,8 +1,7 @@
 package de.acosci.tasks.controller.rest;
 
-import de.acosci.tasks.model.Task;
 import de.acosci.tasks.model.User;
-import de.acosci.tasks.service.ITaskService;
+import de.acosci.tasks.service.UserService;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -12,54 +11,47 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
-/**
- * Source: https://spring.io/guides/tutorials/rest
- *
- * Cross-Origin Resource Sharing (CORS)
- * https://stackoverflow.com/questions/39623211/add-multiple-cross-origin-urls-in-spring-boot
- * https://www.youtube.com/watch?app=desktop&v=HRwlT_etr60
- */
 @RestController
-@RequestMapping("rest/tasks")
+@RequestMapping("rest/users")
 @RequiredArgsConstructor
-@CrossOrigin("http://localhost:5173/")//@CrossOrigin(origins = {"http://localhost:5173, http://localhost:3030"}) // vue frontend: http://localhost:5173, postman: http://localhost:3030
-public class TaskRestController {
+@CrossOrigin("http://localhost:5173/")
+public class UserRestController {
     @Autowired
-    private final ITaskService taskService;
+    private final UserService userService;
 
-    //@CrossOrigin(origins = "http://localhost:5173")
     @GetMapping
-    public ResponseEntity<List<Task>> getAllTasks() {
+    public ResponseEntity<List<User>> getAllUsers() {
         try {
-            return new ResponseEntity<>(taskService.getTasks(), HttpStatus.OK);
+            return new ResponseEntity<>(userService.getUsers(), HttpStatus.OK);
         } catch (EntityNotFoundException e) {
             return ResponseEntity.badRequest().build();
         }
     }
 
-    //@CrossOrigin(origins = "http://localhost:5173")
     @GetMapping("/{id}")
-    public ResponseEntity<Task> getTaskByID(@PathVariable Long id) {
+    public ResponseEntity<User> getUserById(@PathVariable long id) {
         try {
-            return new ResponseEntity<Task>(taskService.getTaskByID(id), HttpStatus.OK);
+            return new ResponseEntity<User>(userService.getUserByID(id), HttpStatus.OK);
         } catch (EntityNotFoundException e) {
             return ResponseEntity.notFound().build();
         }
     }
 
     @PostMapping
-    public ResponseEntity<Task> saveNewTask(@RequestBody Task task) {
+    public ResponseEntity<User> createUser(@RequestBody User user) {
         try {
-            return new ResponseEntity<Task>(taskService.saveTask(task), HttpStatus.OK);
+            return new ResponseEntity<User>(userService.saveUser(user), HttpStatus.CREATED);
         } catch(Exception e) { // todo
             return ResponseEntity.badRequest().build();
         }
     }
 
+
+
     @PutMapping
-    public ResponseEntity<Task> updateTaskByID(@RequestBody Task task) {
+    public ResponseEntity<User> updateUserByID(@RequestBody User user) {
         try {
-            return new ResponseEntity<Task>(taskService.saveTask(task), HttpStatus.OK);
+            return new ResponseEntity<User>(userService.saveUser(user), HttpStatus.OK);
         } catch(Exception e) { // todo
             return ResponseEntity.badRequest().build();
         }
@@ -68,7 +60,7 @@ public class TaskRestController {
     @DeleteMapping("/{id}")
     public ResponseEntity deleteTaskByID(@PathVariable Long id) {
         try {
-            taskService.deleteTaskByID(id);
+            userService.deleteUserByID(id);
             return new ResponseEntity<>(HttpStatus.OK);
         } catch(Exception e) { // todo
             return ResponseEntity.badRequest().build();
@@ -76,13 +68,12 @@ public class TaskRestController {
     }
 
     @DeleteMapping
-    public ResponseEntity deleteTask(@RequestBody Task task) {
+    public ResponseEntity deleteTask(@RequestBody User user) {
         try {
-            taskService.deleteTask(task);
+            userService.deleteUser(user);
             return new ResponseEntity<>(HttpStatus.OK);
         } catch(Exception e) { // todo
             return ResponseEntity.badRequest().build();
         }
     }
-
 }

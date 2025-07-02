@@ -1,5 +1,6 @@
 package de.acosci.tasks.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -10,11 +11,11 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Set;
 
+@Entity
+@Table(name="user")
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-@Entity
-@Table(name="user")
 public class User {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -27,9 +28,12 @@ public class User {
     @CreationTimestamp
     private LocalDateTime registration;
 
+    @JsonIgnore
     @Column(name = "password")
     private String password;
 
+    @JsonIgnore
+    @Transient
     private String password_verification;
 
     @Column(name = "first_name", nullable = false, length = 20)

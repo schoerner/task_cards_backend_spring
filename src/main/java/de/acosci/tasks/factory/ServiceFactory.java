@@ -14,18 +14,13 @@ import org.springframework.context.annotation.Primary;
 public class ServiceFactory {
     @Primary
     @Bean(name= "MariaDBTaskServiceBean")
-    public TaskService createMariaDBTaskService() {
-        return new MariaDBTaskService();
-    }
-
-    @Bean(name= "RAMTaskServiceBean")
-    public TaskService createRAMTaskService() {
-        return new RAMTaskService();
+    public ITaskService createMariaDBTaskService() {
+        return new TaskService();
     }
 
     @Primary
     @Bean(name= "MariaDBUserServiceBean")
-    public UserService createMariaDBUserService() {
-        return new MariaDBUserService();
+    public IUserService createMariaDBUserService() {
+        return new UserService();
     }
 }

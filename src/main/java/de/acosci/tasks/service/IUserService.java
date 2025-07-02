@@ -1,0 +1,13 @@
+package de.acosci.tasks.service;
+
+import de.acosci.tasks.model.User;
+
+import java.util.List;
+
+public interface IUserService {
+    List<User> getUsers();
+    User saveUser(User user);
+    User getUserByID(Long id);
+    void deleteUserByID(Long id);
+    void deleteUser(User user);
+}
