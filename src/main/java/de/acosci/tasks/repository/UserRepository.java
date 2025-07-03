@@ -1,8 +1,7 @@
 package de.acosci.tasks.repository;
 
-import de.acosci.tasks.model.User;
+import de.acosci.tasks.model.entity.User;
 import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
 
 @Repository

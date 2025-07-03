@@ -1,6 +1,6 @@
 package de.acosci.tasks.controller.rest;
 
-import de.acosci.tasks.model.User;
+import de.acosci.tasks.model.entity.User;
 import de.acosci.tasks.service.UserService;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
@@ -14,7 +14,7 @@ import java.util.List;
 @RestController
 @RequestMapping("rest/users")
 @RequiredArgsConstructor
-@CrossOrigin("http://localhost:5173/")
+//@CrossOrigin(origins = {"http://localhost:5173/", "http://localhost:3000/"})
 public class UserRestController {
     @Autowired
     private final UserService userService;

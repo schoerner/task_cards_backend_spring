@@ -1,7 +1,6 @@
 package de.acosci.tasks.controller.rest;
 
-import de.acosci.tasks.model.Task;
-import de.acosci.tasks.model.User;
+import de.acosci.tasks.model.entity.Task;
 import de.acosci.tasks.service.ITaskService;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
@@ -22,7 +21,7 @@ import java.util.List;
 @RestController
 @RequestMapping("rest/tasks")
 @RequiredArgsConstructor
-@CrossOrigin("http://localhost:5173/")//@CrossOrigin(origins = {"http://localhost:5173, http://localhost:3030"}) // vue frontend: http://localhost:5173, postman: http://localhost:3030
+@CrossOrigin(origins = {"http://localhost:5173/", "http://localhost:3000/"}) // vue frontend: http://localhost:5173, postman: http://localhost:3030
 public class TaskRestController {
     @Autowired
     private final ITaskService taskService;

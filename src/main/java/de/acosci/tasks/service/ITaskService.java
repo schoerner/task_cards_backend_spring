@@ -1,6 +1,6 @@
 package de.acosci.tasks.service;
 
-import de.acosci.tasks.model.Task;
+import de.acosci.tasks.model.entity.Task;
 
 import java.util.List;
 

@@ -1,4 +1,4 @@
-package de.acosci.tasks.model;
+package de.acosci.tasks.model.entity;
 
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
@@ -20,7 +20,8 @@ public class Permission {
     private Boolean name;
     @Column(name = "description")
     private Boolean description;
-
+/* todo
     @ManyToMany(mappedBy = "permissions")
     private List<User> users;
+    */
 }

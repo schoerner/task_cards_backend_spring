@@ -1,4 +1,4 @@
-package de.acosci.tasks.model;
+package de.acosci.tasks.model.entity;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
@@ -7,12 +7,12 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 import org.hibernate.annotations.CreationTimestamp;
 
-import java.time.LocalDateTime;
+import java.util.Date;
 import java.util.List;
 import java.util.Set;
 
 @Entity
-@Table(name="user")
+@Table(name="users")
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
@@ -26,7 +26,7 @@ public class User {
 
     @Column(name = "registration")
     @CreationTimestamp
-    private LocalDateTime registration;
+    private Date registration;
 
     @JsonIgnore
     @Column(name = "password")
@@ -49,11 +49,13 @@ public class User {
         return password.length() >= 4;
     }
 
-    /*
     @OneToMany(mappedBy = "creator")
+    @JsonIgnore
     private List<Task> tasks;
-*/
-    /** https://www.youtube.com/watch?v=CvDS6DltIno */
+
+    /* https://www.youtube.com/watch?v=CvDS6DltIno
+
+    todo
     @ManyToMany
     @JoinTable(
         name = "user_permissions",
@@ -61,4 +63,5 @@ public class User {
         inverseJoinColumns = @JoinColumn(name = "permission_id")
     )
     private Set<Permission> permissions;
+    */
 }

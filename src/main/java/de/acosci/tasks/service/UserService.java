@@ -1,13 +1,12 @@
 package de.acosci.tasks.service;
 
-import de.acosci.tasks.model.User;
+import de.acosci.tasks.model.entity.User;
 import de.acosci.tasks.repository.UserRepository;
 import jakarta.persistence.EntityNotFoundException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
-import java.util.Optional;
 
 @Service
 public class UserService implements IUserService {

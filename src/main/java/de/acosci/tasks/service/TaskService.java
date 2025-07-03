@@ -1,7 +1,6 @@
 package de.acosci.tasks.service;
 
-import de.acosci.tasks.model.Task;
-import de.acosci.tasks.repository.TaskNotFoundException;
+import de.acosci.tasks.model.entity.Task;
 import de.acosci.tasks.repository.TaskRepository;
 import jakarta.persistence.EntityNotFoundException;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -17,7 +16,10 @@ public class TaskService implements ITaskService {
 
     @Override
     public List<Task> getTasks() {
-        return taskRepository.findAll();
+        List<Task> tmp = taskRepository.findAll();
+        tmp.stream().forEach(task -> { task.isActive(); });
+        return tmp;
+        //return taskRepository.findAll();
     }
 
     @Override public List<Task> getTasksByUserID(Long userID) {
