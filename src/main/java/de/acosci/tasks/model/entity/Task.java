@@ -5,6 +5,7 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.util.ArrayList;
 import java.util.List;
 
 @NoArgsConstructor
@@ -34,7 +35,7 @@ public class Task {
     private User creator;
 
     @OneToMany(mappedBy = "task")
-    private List<TimeRecord> timeRecords;
+    private List<TimeRecord> timeRecords = new ArrayList<>();
 
     public Boolean getActive() {
         active = isActive();

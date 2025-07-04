@@ -68,7 +68,7 @@ public class UserRestController {
     }
 
     @DeleteMapping
-    public ResponseEntity deleteTask(@RequestBody User user) {
+    public ResponseEntity deleteUser(@RequestBody User user) {
         try {
             userService.deleteUser(user);
             return new ResponseEntity<>(HttpStatus.OK);

@@ -3,6 +3,7 @@ package de.acosci.tasks.service;
 import de.acosci.tasks.model.entity.User;
 import de.acosci.tasks.repository.UserRepository;
 import jakarta.persistence.EntityNotFoundException;
+import lombok.NonNull;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -51,4 +52,17 @@ public class UserService implements IUserService {
     public void deleteUser(User user) {
         userRepository.delete(user);
     }
+
+/*
+    public String generateToken(@NonNull User user)
+    {
+
+    }
+
+    public Claims parseToke(@NonNull String token)
+    {
+
+    }
+
+ */
 }
