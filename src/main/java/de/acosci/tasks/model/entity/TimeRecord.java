@@ -1,6 +1,5 @@
 package de.acosci.tasks.model.entity;
 
-import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
@@ -38,14 +37,6 @@ public class TimeRecord {
         this.task = task;
         timeStart = new Date();
         timeEnd = null;
-    }
-
-    public void stop() {
-        this.timeEnd = new Date();
-    }
-
-    public boolean isActive() {
-        return timeStart != null && timeEnd == null;
     }
 
 }

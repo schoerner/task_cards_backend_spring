@@ -1,9 +1,9 @@
-package de.acosci.tasks.service;
+package de.acosci.tasks.service.impl;
 
 import de.acosci.tasks.model.entity.User;
 import de.acosci.tasks.repository.UserRepository;
+import de.acosci.tasks.service.IUserService;
 import jakarta.persistence.EntityNotFoundException;
-import lombok.NonNull;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 

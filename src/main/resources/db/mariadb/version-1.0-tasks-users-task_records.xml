@@ -50,6 +50,8 @@
         <addForeignKeyConstraint baseColumnNames="task_id"
                                  baseTableName="time_records"
                                  constraintName="fk_task_id"
+                                 onDelete="CASCADE"
+                                 onUpdate="CASCADE"
                                  referencedColumnNames="id"
                                  referencedTableName="tasks" />
 

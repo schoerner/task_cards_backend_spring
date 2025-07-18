@@ -18,17 +18,9 @@ public class Task {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "title")
     private String title;
 
-    @Column(name = "description")
     private String description;
-
-    @Transient
-    private Boolean active;
-
-    @Transient
-    private TimeRecord activeTimeRecord;
 
     @ManyToOne
     @JoinColumn(name = "creator_user_id")
@@ -37,17 +29,8 @@ public class Task {
     @OneToMany(mappedBy = "task")
     private List<TimeRecord> timeRecords = new ArrayList<>();
 
-    public Boolean getActive() {
-        active = isActive();
-        return active;
-    }
-
-    public TimeRecord getActiveTimeRecord() {
-        activeTimeRecord = timeRecords.stream().filter(timeRecord -> timeRecord.isActive()).findFirst().orElse(null);
-        return activeTimeRecord;
-    }
-
-    public Boolean isActive() {
-        return timeRecords.stream().anyMatch( timeRecord -> timeRecord.isActive());
-    }
+    // todo abhängig von Uses Cases @Transient
+    // MVP Minimal viable Product
+    @Transient
+    private boolean active;
 }

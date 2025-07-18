@@ -1,6 +1,6 @@
 package de.acosci.tasks.common.config;
 
-import de.acosci.tasks.service.JwtService;
+import de.acosci.tasks.service.impl.JwtService;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;

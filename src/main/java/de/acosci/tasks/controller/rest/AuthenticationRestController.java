@@ -4,17 +4,16 @@ import de.acosci.tasks.model.dto.LoginResponseDTO;
 import de.acosci.tasks.model.dto.LoginUserDTO;
 import de.acosci.tasks.model.dto.RegisterUserDTO;
 import de.acosci.tasks.model.entity.User;
-import de.acosci.tasks.service.AuthenticationService;
-import de.acosci.tasks.service.JwtService;
+import de.acosci.tasks.service.impl.AuthenticationService;
+import de.acosci.tasks.service.impl.JwtService;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 // https://medium.com/@tericcabrel/implement-jwt-authentication-in-a-spring-boot-3-application-5839e4fd8fac
-@RequestMapping("/auth")
+
 @RestController
+@RequestMapping("api/auth")
+@CrossOrigin(origins = {"http://localhost", "http://localhost:5173/", "http://localhost:3000/"})
 public class AuthenticationRestController {
     private final JwtService jwtService;
 

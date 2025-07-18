@@ -1,4 +1,4 @@
-package de.acosci.tasks.service;
+package de.acosci.tasks.service.impl;
 
 import de.acosci.tasks.model.dto.LoginUserDTO;
 import de.acosci.tasks.model.dto.RegisterUserDTO;

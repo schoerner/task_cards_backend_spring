@@ -1,7 +1,7 @@
 package de.acosci.tasks.controller.rest;
 
 import de.acosci.tasks.model.entity.Task;
-import de.acosci.tasks.service.ITaskService;
+import de.acosci.tasks.service.TaskService;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -19,18 +19,38 @@ import java.util.List;
  * https://www.youtube.com/watch?app=desktop&v=HRwlT_etr60
  */
 @RestController
-@RequestMapping("rest/tasks")
+@RequestMapping("api/tasks")
 @RequiredArgsConstructor
-@CrossOrigin(origins = {"http://localhost:5173/", "http://localhost:3000/"}) // vue frontend: http://localhost:5173, postman: http://localhost:3030
+@CrossOrigin(origins = {"http://localhost", "http://localhost:5173/", "http://localhost:3000/"})
 public class TaskRestController {
     @Autowired
-    private final ITaskService taskService;
+    private final TaskService taskService;
+
+    @GetMapping("/start/{id}")
+    public ResponseEntity<Task> startTask(@PathVariable Long id) {
+        return ResponseEntity.ok(taskService.startTask(id));
+    }
+
+    @PostMapping("/start")
+    public ResponseEntity<Task> startTask(@RequestBody Task task) {
+        return ResponseEntity.ok(taskService.startTask(task));
+    }
+
+    @GetMapping("/stop/{id}")
+    public ResponseEntity<Task> stopTask(@PathVariable Long id) {
+        return ResponseEntity.ok(taskService.stopTask(id));
+    }
+
+    @PutMapping("/stop")
+    public ResponseEntity<Task> stopTask(@RequestBody Task task) {
+        return ResponseEntity.ok(taskService.stopTask(task));
+    }
 
     //@CrossOrigin(origins = "http://localhost:5173")
     @GetMapping
     public ResponseEntity<List<Task>> getAllTasks() {
         try {
-            return new ResponseEntity<>(taskService.getTasks(), HttpStatus.OK);
+            return new ResponseEntity<>(taskService.getAllTasks(), HttpStatus.OK);
         } catch (EntityNotFoundException e) {
             return ResponseEntity.badRequest().build();
         }

@@ -1,4 +1,4 @@
-package de.acosci.tasks.service;
+package de.acosci.tasks.service.impl;
 
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;

@@ -1,6 +1,8 @@
 package de.acosci.tasks.factory;
 
 import de.acosci.tasks.service.*;
+import de.acosci.tasks.service.impl.TaskServiceImpl;
+import de.acosci.tasks.service.impl.UserService;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Primary;
@@ -13,9 +15,9 @@ import org.springframework.context.annotation.Primary;
 @Configuration
 public class ServiceFactory {
     @Primary
-    @Bean(name= "MariaDBTaskServiceBean")
-    public ITaskService createMariaDBTaskService() {
-        return new TaskService();
+    @Bean(name= "MariaDBTaskServiceBean") // z.B. mehrere Beans für mehrer Service
+    public TaskService createMariaDBTaskService() {
+        return new TaskServiceImpl();
     }
 
     @Primary
