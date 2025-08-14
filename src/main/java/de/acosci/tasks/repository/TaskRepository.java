@@ -4,6 +4,8 @@ import de.acosci.tasks.model.entity.Task;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
+import java.util.List;
+
 /**
  * @author Gernot Schörner
  * The @Repository annotation is a marker for any class that fulfills the role or stereotype of a repository (also known as Data Access Object or DAO). Among the uses of this marker is the automatic translation of exceptions, as described in Exception Translation.
@@ -12,4 +14,5 @@ import org.springframework.stereotype.Repository;
  */
 @Repository
 public interface TaskRepository extends JpaRepository<Task, Long> {
+    List<Task> findByCreator_Id(Long creatorId);
 }

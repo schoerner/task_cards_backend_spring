@@ -2,8 +2,10 @@ package de.acosci.tasks.service.impl;
 
 import de.acosci.tasks.model.entity.Task;
 import de.acosci.tasks.model.entity.TimeRecord;
+import de.acosci.tasks.model.entity.User;
 import de.acosci.tasks.repository.TaskRepository;
 import de.acosci.tasks.repository.TimeRecordRepository;
+import de.acosci.tasks.repository.UserRepository;
 import de.acosci.tasks.service.TaskService;
 import jakarta.persistence.EntityNotFoundException;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -25,6 +27,20 @@ public class TaskServiceImpl implements TaskService {
     @Override
     public List<Task> getAllTasks() {
         List<Task> allTasks = taskRepository.findAll();
+
+        // update temporary active status for dto?
+        allTasks.forEach(task -> {
+            boolean active = task.getTimeRecords().stream()
+                    .anyMatch(timeRecord -> timeRecord.getTimeEnd() == null);
+            task.setActive(active);
+        });
+
+        return allTasks;
+    }
+
+    @Override
+    public List<Task> getAllTasksByUserID(Long userID) {
+        List<Task> allTasks = taskRepository.findByCreator_Id(userID);
 
         // update temporary active status for dto?
         allTasks.forEach(task -> {
@@ -111,10 +127,6 @@ public class TaskServiceImpl implements TaskService {
         timeRecordRepository.save(activeTimeRecord);
 
         return task;
-    }
-
-    @Override public List<Task> getTasksByUserID(Long userID) {
-        return null;//taskRepository.findByCreatorID(userID);
     }
 
     @Override

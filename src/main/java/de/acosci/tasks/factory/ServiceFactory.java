@@ -2,7 +2,7 @@ package de.acosci.tasks.factory;
 
 import de.acosci.tasks.service.*;
 import de.acosci.tasks.service.impl.TaskServiceImpl;
-import de.acosci.tasks.service.impl.UserService;
+import de.acosci.tasks.service.impl.UserServiceImpl;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Primary;
@@ -22,7 +22,7 @@ public class ServiceFactory {
 
     @Primary
     @Bean(name= "MariaDBUserServiceBean")
-    public IUserService createMariaDBUserService() {
-        return new UserService();
+    public UserService createMariaDBUserService() {
+        return new UserServiceImpl();
     }
 }

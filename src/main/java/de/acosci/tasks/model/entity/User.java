@@ -24,15 +24,12 @@ public class User implements UserDetails {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "email", unique=true)
     private String email;
 
-    @Column(name = "registration")
     @CreationTimestamp
     private Date registration;
 
     @JsonIgnore
-    @Column(name = "password")
     private String password;
 
     @JsonIgnore

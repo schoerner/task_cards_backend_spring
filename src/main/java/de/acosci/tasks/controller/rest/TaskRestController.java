@@ -28,7 +28,11 @@ public class TaskRestController {
 
     @GetMapping("/start/{id}")
     public ResponseEntity<Task> startTask(@PathVariable Long id) {
-        return ResponseEntity.ok(taskService.startTask(id));
+        try {
+            return ResponseEntity.ok(taskService.startTask(id));
+        } catch (EntityNotFoundException e) {
+            return ResponseEntity.notFound().build();
+        }
     }
 
     @PostMapping("/start")
@@ -38,7 +42,11 @@ public class TaskRestController {
 
     @GetMapping("/stop/{id}")
     public ResponseEntity<Task> stopTask(@PathVariable Long id) {
-        return ResponseEntity.ok(taskService.stopTask(id));
+        try {
+            return ResponseEntity.ok(taskService.stopTask(id));
+        } catch (EntityNotFoundException e) {
+            return ResponseEntity.notFound().build();
+        }
     }
 
     @PutMapping("/stop")
@@ -51,6 +59,15 @@ public class TaskRestController {
     public ResponseEntity<List<Task>> getAllTasks() {
         try {
             return new ResponseEntity<>(taskService.getAllTasks(), HttpStatus.OK);
+        } catch (EntityNotFoundException e) {
+            return ResponseEntity.badRequest().build();
+        }
+    }
+
+    @GetMapping("/user/{userId}")
+    public ResponseEntity<List<Task>> getAllTasksByUserID(@PathVariable Long userId) {
+        try {
+            return new ResponseEntity<>(taskService.getAllTasksByUserID(userId), HttpStatus.OK);
         } catch (EntityNotFoundException e) {
             return ResponseEntity.badRequest().build();
         }

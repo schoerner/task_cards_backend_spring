@@ -4,7 +4,7 @@ import de.acosci.tasks.model.entity.User;
 
 import java.util.List;
 
-public interface IUserService {
+public interface UserService {
     List<User> getUsers();
     User saveUser(User user);
     User getUserByID(Long id);

@@ -2,7 +2,7 @@ package de.acosci.tasks.service.impl;
 
 import de.acosci.tasks.model.entity.User;
 import de.acosci.tasks.repository.UserRepository;
-import de.acosci.tasks.service.IUserService;
+import de.acosci.tasks.service.UserService;
 import jakarta.persistence.EntityNotFoundException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -10,7 +10,7 @@ import org.springframework.stereotype.Service;
 import java.util.List;
 
 @Service
-public class UserService implements IUserService {
+public class UserServiceImpl implements UserService {
 
     @Autowired // inject repository
     private UserRepository userRepository;

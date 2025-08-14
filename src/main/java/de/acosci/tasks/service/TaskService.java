@@ -10,8 +10,8 @@ import java.util.List;
  */
 public interface TaskService {
     List<Task> getAllTasks();
+    List<Task> getAllTasksByUserID(Long userID);
     List<Task> getActiveTasks();
-    List<Task> getTasksByUserID(Long userID);
     Task saveTask(Task task) throws Exception;
     Task getTaskByID(Long id);
     void deleteTaskByID(Long id);

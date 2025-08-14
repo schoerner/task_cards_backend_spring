@@ -1,7 +1,7 @@
 package de.acosci.tasks.controller.rest;
 
 import de.acosci.tasks.model.entity.User;
-import de.acosci.tasks.service.impl.UserService;
+import de.acosci.tasks.service.impl.UserServiceImpl;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -17,7 +17,7 @@ import java.util.List;
 @CrossOrigin(origins = {"http://localhost", "http://localhost:5173/", "http://localhost:3000/"})
 public class UserRestController {
     @Autowired
-    private final UserService userService;
+    private final UserServiceImpl userService;
 
     @GetMapping
     public ResponseEntity<List<User>> getAllUsers() {

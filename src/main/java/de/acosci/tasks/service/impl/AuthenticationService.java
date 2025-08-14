@@ -32,7 +32,6 @@ public class AuthenticationService {
         user.setEmail(input.email());
         user.setFirstName(input.firstName());
         user.setLastName(input.lastName());
-        // todo password verification
         user.setPassword(passwordEncoder.encode(input.password()));
         return userRepository.save(user);
     }
