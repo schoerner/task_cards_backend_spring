@@ -14,11 +14,14 @@ import java.util.concurrent.atomic.AtomicLong;
 @NoArgsConstructor
 public class TaskStatistics {
     private List<Task> tasks;
-    private Long numberOfTasks;
+    private int numberOfTasks;
     private Long meanTimePerTask;
+    private Long totalTime;
+    private Long maxTimeOfTasks;
 
     public int getNumberOfTasks() {
-        return tasks.size();
+        numberOfTasks = tasks.size();
+        return numberOfTasks;
     }
 
     public Long getMeanTimePerTask() {
@@ -29,7 +32,22 @@ public class TaskStatistics {
                 sumMinutes.addAndGet(TimeUnit.MINUTES.convert(diffInMillies, TimeUnit.MILLISECONDS));
             });
         });
-        Long meanMinutes = sumMinutes.get() / tasks.size();
-        return meanMinutes;
+        meanTimePerTask = sumMinutes.get() / tasks.size();
+        return meanTimePerTask;
     }
+
+    public Long getMaxTime() {
+        AtomicLong maxTime = new AtomicLong(0L);
+        tasks.stream().forEach(task -> {
+            task.getTimeRecords().stream().forEach(timeRecord -> {
+                long diffInMillies = timeRecord.getTimeEnd().getTime() - timeRecord.getTimeStart().getTime();
+                if(diffInMillies > maxTime.get()) {
+                    maxTime.set(diffInMillies);
+                }
+            });
+        });
+        return maxTime.get();
+    }
+
+
 }

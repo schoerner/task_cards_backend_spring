@@ -1,5 +1,6 @@
 package de.acosci.tasks.service;
 
+import de.acosci.tasks.model.entity.Project;
 import de.acosci.tasks.model.entity.Task;
 import de.acosci.tasks.model.entity.TimeRecord;
 import de.acosci.tasks.model.entity.User;
@@ -13,10 +14,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Date;
-import java.util.Optional;
+import java.util.*;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.when;
@@ -35,9 +33,9 @@ class TaskServiceTest {
     @Autowired
     private TaskServiceImpl taskService;
 
-    private final User mockUser = new User(1L, "test@test.org", new Date(), "Geheim01", "Geheim01", "John", "Doe", new ArrayList<Task>());
-    private final Task mockTask1 = new Task(1L, "Test Task 1", "Description for Test Task 1", mockUser, new ArrayList<>(), false);
-    private final Task mockTask2 = new Task(2L, "Test Task 2", "Description for Test Task 1", mockUser, new ArrayList<>(), false);
+    private final User mockUser = new User(1L, "test@test.org", new Date(), "Geheim01", "Geheim01", "John", "Doe", new ArrayList<Task>(), new HashSet<>());
+    private final Task mockTask1 = new Task(1L, "Test Task 1", "Description for Test Task 1", mockUser, new Project(), new ArrayList<>(), false);
+    private final Task mockTask2 = new Task(2L, "Test Task 2", "Description for Test Task 1", mockUser, new Project(), new ArrayList<>(), false);
 
     @BeforeEach
     void setUp() {
