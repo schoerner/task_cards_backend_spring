@@ -48,6 +48,12 @@ public class User implements UserDetails {
         return password.length() >= 4;
     }
 
+    // Strategie 2 von: https://www.baeldung.com/jpa-one-to-one
+    @OneToOne(mappedBy = "user", cascade = CascadeType.ALL)//, orphanRemoval = true)
+    //@JoinColumn(name = "user_profile_id")// optional, da automatisch generiert: , referencedColumnName = "id")
+    @PrimaryKeyJoinColumn
+    private UserProfile profile;
+
     @JsonIgnore
     @OneToMany(mappedBy = "creator")
     private List<Task> tasks = new ArrayList<>();

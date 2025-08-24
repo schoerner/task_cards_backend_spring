@@ -1,9 +1,6 @@
 package de.acosci.tasks.service;
 
-import de.acosci.tasks.model.entity.Project;
-import de.acosci.tasks.model.entity.Task;
-import de.acosci.tasks.model.entity.TimeRecord;
-import de.acosci.tasks.model.entity.User;
+import de.acosci.tasks.model.entity.*;
 import de.acosci.tasks.repository.TaskRepository;
 import de.acosci.tasks.repository.TimeRecordRepository;
 import de.acosci.tasks.service.impl.TaskServiceImpl;
@@ -33,7 +30,7 @@ class TaskServiceTest {
     @Autowired
     private TaskServiceImpl taskService;
 
-    private final User mockUser = new User(1L, "test@test.org", new Date(), "Geheim01", "Geheim01", "John", "Doe", new ArrayList<Task>(), new HashSet<>());
+    private final User mockUser = new User(1L, "test@test.org", new Date(), "Geheim01", "Geheim01", "John", "Doe", new UserProfile(), new ArrayList<Task>(), new HashSet<>());
     private final Task mockTask1 = new Task(1L, "Test Task 1", "Description for Test Task 1", mockUser, new Project(), new ArrayList<>(), false);
     private final Task mockTask2 = new Task(2L, "Test Task 2", "Description for Test Task 1", mockUser, new Project(), new ArrayList<>(), false);
 
