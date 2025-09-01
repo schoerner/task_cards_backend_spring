@@ -12,6 +12,7 @@ import org.springframework.context.annotation.Primary;
  * https://stackoverflow.com/questions/37565186/spring-couldnt-autowired-there-is-more-than-one-bean-of-type
  * Qualifier annotation https://www.baeldung.com/spring-qualifier-annotation
  */
+/*
 @Configuration
 public class ServiceFactory {
     @Primary
@@ -26,3 +27,4 @@ public class ServiceFactory {
         return new UserServiceImpl();
     }
 }
+*/

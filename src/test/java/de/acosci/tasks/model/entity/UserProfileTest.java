@@ -45,9 +45,12 @@ class UserProfileTest {
         assertEquals(0, userRepository.findAll().size());
         assertEquals(0, userProfileRepository.findAll().size());
 
+        assertNull(user1.getId());
         User insertedUser1 = userRepository.save(user1);
         assertEquals(1, userRepository.findAll().size());
         assertEquals(1, userProfileRepository.findAll().size());
+        assertNotNull(user1.getId());
+        assertNotNull(user1Profile.getId());
 
         UserProfile insertedUser1Profile = userProfileRepository.save(user1Profile);
         assertEquals(1, userRepository.findAll().size());

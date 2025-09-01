@@ -31,6 +31,24 @@ public class SecurityConfiguration {
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+        http
+                .csrf(csrf -> csrf.disable())
+                .authorizeHttpRequests(auth -> auth
+                        .requestMatchers("/api/auth/**").permitAll()          // Auth-Endpoints
+                        .requestMatchers("/actuator/health").permitAll()      // Health Check ohne Auth
+                        .anyRequest().authenticated()                         // Alles andere geschützt
+                )
+                .sessionManagement(session -> session
+                        .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
+                )
+                .authenticationProvider(authenticationProvider)
+                .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
+
+        return http.build();
+    }
+    /*
+    @Bean
+    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http.csrf()
                 .disable()
                 .authorizeHttpRequests()
@@ -47,6 +65,8 @@ public class SecurityConfiguration {
 
         return http.build();
     }
+
+     */
 
     @Bean
     CorsConfigurationSource corsConfigurationSource() {

@@ -73,43 +73,43 @@ public class TaskRestController {
         }
     }
 
-    //@CrossOrigin(origins = "http://localhost:5173")
-    @GetMapping("/{id}")
-    public ResponseEntity<Task> getTaskByID(@PathVariable Long id) {
-        try {
-            return new ResponseEntity<Task>(taskService.getTaskByID(id), HttpStatus.OK);
-        } catch (EntityNotFoundException e) {
-            return ResponseEntity.notFound().build();
-        }
+//@CrossOrigin(origins = "http://localhost:5173")
+@GetMapping("/{id}")
+public ResponseEntity<Task> getTaskByID(@PathVariable Long id) {
+    try {
+        return new ResponseEntity<Task>(taskService.getTaskByID(id), HttpStatus.OK);
+    } catch (EntityNotFoundException e) {
+        return ResponseEntity.notFound().build();
     }
+}
 
-    @PostMapping
-    public ResponseEntity<Task> saveNewTask(@RequestBody Task task) {
-        try {
-            return new ResponseEntity<Task>(taskService.saveTask(task), HttpStatus.OK);
-        } catch(Exception e) { // todo
-            return ResponseEntity.badRequest().build();
-        }
+@PostMapping
+public ResponseEntity<Task> saveNewTask(@RequestBody Task task) {
+    try {
+        return new ResponseEntity<Task>(taskService.saveTask(task), HttpStatus.OK);
+    } catch(Exception e) { // todo
+        return ResponseEntity.badRequest().build();
     }
+}
 
-    @PutMapping
-    public ResponseEntity<Task> updateTaskByID(@RequestBody Task task) {
-        try {
-            return new ResponseEntity<Task>(taskService.saveTask(task), HttpStatus.OK);
-        } catch(Exception e) { // todo
-            return ResponseEntity.badRequest().build();
-        }
+@PutMapping
+public ResponseEntity<Task> updateTaskByID(@RequestBody Task task) {
+    try {
+        return new ResponseEntity<Task>(taskService.saveTask(task), HttpStatus.OK);
+    } catch(Exception e) { // todo
+        return ResponseEntity.badRequest().build();
     }
+}
 
-    @DeleteMapping("/{id}")
-    public ResponseEntity deleteTaskByID(@PathVariable Long id) {
-        try {
-            taskService.deleteTaskByID(id);
-            return new ResponseEntity<>(HttpStatus.OK);
-        } catch(Exception e) { // todo
-            return ResponseEntity.badRequest().build();
-        }
+@DeleteMapping("/{id}")
+public ResponseEntity deleteTaskByID(@PathVariable Long id) {
+    try {
+        taskService.deleteTaskByID(id);
+        return new ResponseEntity<>(HttpStatus.OK);
+    } catch(Exception e) { // todo
+        return ResponseEntity.badRequest().build();
     }
+}
 
     @DeleteMapping
     public ResponseEntity deleteTask(@RequestBody Task task) {

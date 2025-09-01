@@ -8,6 +8,7 @@ import de.acosci.tasks.repository.TimeRecordRepository;
 import de.acosci.tasks.repository.UserRepository;
 import de.acosci.tasks.service.TaskService;
 import jakarta.persistence.EntityNotFoundException;
+import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -16,40 +17,36 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 @Service
+@RequiredArgsConstructor
 public class TaskServiceImpl implements TaskService {
 
-    @Autowired // inject repository
-    private TaskRepository taskRepository;
+    private final TaskRepository taskRepository;
 
     @Autowired
     private TimeRecordRepository timeRecordRepository;
 
-    @Override
-    public List<Task> getAllTasks() {
-        List<Task> allTasks = taskRepository.findAll();
-
+    private List<Task> determineActiveTasks(List<Task> tasks) {
         // update temporary active status for dto?
-        allTasks.forEach(task -> {
+        tasks.forEach(task -> {
             boolean active = task.getTimeRecords().stream()
                     .anyMatch(timeRecord -> timeRecord.getTimeEnd() == null);
             task.setActive(active);
         });
+        return tasks;
+    }
 
-        return allTasks;
+    @Override
+    public List<Task> getAllTasks() {
+        List<Task> tasks = taskRepository.findAll();
+        tasks = determineActiveTasks(tasks);
+        return tasks;
     }
 
     @Override
     public List<Task> getAllTasksByUserID(Long userID) {
-        List<Task> allTasks = taskRepository.findByCreator_Id(userID);
-
-        // update temporary active status for dto?
-        allTasks.forEach(task -> {
-            boolean active = task.getTimeRecords().stream()
-                    .anyMatch(timeRecord -> timeRecord.getTimeEnd() == null);
-            task.setActive(active);
-        });
-
-        return allTasks;
+        List<Task> tasks = taskRepository.findByCreator_Id(userID);
+        tasks = determineActiveTasks(tasks);
+        return tasks;
     }
 
     @Override
