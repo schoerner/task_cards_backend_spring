@@ -20,6 +20,11 @@ public class ProjectServiceImpl implements ProjectService {
     }
 
     @Override
+    public List<Project> getAllProjectsByUserID(Long userID) {
+        return projectRepository.findByUsers_Id(userID);
+    }
+
+    @Override
     public Project findById(Long id) throws EntityNotFoundException {
         return projectRepository.findById(id).orElseThrow(() -> new EntityNotFoundException("The project with id " + id + " was not found."));
     }

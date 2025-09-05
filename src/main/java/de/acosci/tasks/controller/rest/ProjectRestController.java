@@ -31,7 +31,16 @@ public class ProjectRestController {
     @GetMapping("/{id}")
     public ResponseEntity<Project> getByID(@PathVariable Long id) {
         try {
-            return new ResponseEntity<Project>(projectService.findById(id), HttpStatus.OK);
+            return new ResponseEntity<>(projectService.findById(id), HttpStatus.OK);
+        } catch (EntityNotFoundException e) {
+            return ResponseEntity.notFound().build();
+        }
+    }
+
+    @GetMapping("/user/{userId}")
+    public ResponseEntity<List<Project>> getAllProjectsByUserID(@PathVariable Long userId) {
+        try {
+            return new ResponseEntity<>(projectService.getAllProjectsByUserID(userId), HttpStatus.OK);
         } catch (EntityNotFoundException e) {
             return ResponseEntity.notFound().build();
         }
@@ -40,7 +49,7 @@ public class ProjectRestController {
     @PostMapping
     public ResponseEntity<Project> save(@RequestBody Project project){
         try {
-            return new ResponseEntity<Project>(projectService.save(project), HttpStatus.OK);
+            return new ResponseEntity<>(projectService.save(project), HttpStatus.OK);
         } catch(Exception e) {
             return ResponseEntity.badRequest().build();
         }
@@ -49,14 +58,14 @@ public class ProjectRestController {
     @PutMapping
     public ResponseEntity<Project> update(@RequestBody Project project){
         try {
-            return new ResponseEntity<Project>(projectService.save(project), HttpStatus.OK);
+            return new ResponseEntity<>(projectService.save(project), HttpStatus.OK);
         } catch(Exception e) {
             return ResponseEntity.badRequest().build();
         }
     }
 
     @DeleteMapping
-    public ResponseEntity delete(@RequestBody Project project) {
+    public ResponseEntity<Project> delete(@RequestBody Project project) {
         try {
             projectService.delete(project);
             return new ResponseEntity<>(HttpStatus.OK);

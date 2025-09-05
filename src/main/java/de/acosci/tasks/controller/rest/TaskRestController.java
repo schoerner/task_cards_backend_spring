@@ -69,7 +69,7 @@ public class TaskRestController {
         try {
             return new ResponseEntity<>(taskService.getAllTasksByUserID(userId), HttpStatus.OK);
         } catch (EntityNotFoundException e) {
-            return ResponseEntity.badRequest().build();
+            return ResponseEntity.notFound().build();
         }
     }
 

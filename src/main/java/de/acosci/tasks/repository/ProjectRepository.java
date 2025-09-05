@@ -2,10 +2,9 @@ package de.acosci.tasks.repository;
 
 import de.acosci.tasks.model.entity.Project;
 import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.data.jpa.repository.Modifying;
-import org.springframework.data.jpa.repository.Query;
-import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
+
+import java.util.List;
 
 @Repository
 public interface ProjectRepository extends JpaRepository<Project, Long> {
@@ -14,4 +13,5 @@ public interface ProjectRepository extends JpaRepository<Project, Long> {
     @Modifying
     void delete(@Param("project") Project project);
      */
+    List<Project> findByUsers_Id(Long userID);
 }
