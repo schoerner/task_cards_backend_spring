@@ -18,3 +18,12 @@ APP_ADMIN_EMAIL=admin@example.com
 APP_ADMIN_PASSWORD=12345678
 ```
 
+## Goals of this project
+- Didactical analysis of Spring Boot framework for ...
+  - Layers of a modern Web Architecture
+  - ORM with JPA
+  - Repositories
+  - Services
+  - RestControllers
+  - Authentication with JWT
+  - User role assignment

@@ -20,8 +20,13 @@ public class ProjectServiceImpl implements ProjectService {
     }
 
     @Override
-    public List<Project> getAllProjectsByUserID(Long userID) {
+    public List<Project> getAllProjectsByUsersID(Long userID) {
         return projectRepository.findByUsers_Id(userID);
+    }
+
+    @Override
+    public List<Project> getAllProjectsByCreatorID(Long userID) {
+        return projectRepository.findByCreator_Id(userID);
     }
 
     @Override
@@ -32,6 +37,11 @@ public class ProjectServiceImpl implements ProjectService {
     @Override
     public Project save(Project project) {
         return projectRepository.save(project);
+    }
+
+    @Override
+    public void deleteById(Long id) {
+        projectRepository.deleteById(id);
     }
 
     @Override

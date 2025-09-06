@@ -14,4 +14,6 @@ public interface ProjectRepository extends JpaRepository<Project, Long> {
     void delete(@Param("project") Project project);
      */
     List<Project> findByUsers_Id(Long userID);
+
+    List<Project> findByCreator_Id(Long userID);
 }

@@ -14,9 +14,9 @@ import java.util.List;
 @RestController
 @RequestMapping("api/users")
 @RequiredArgsConstructor
+//@PreAuthorize("hasRole('ADMIN')")  // Optional, filtered via FilterChain
 @CrossOrigin(origins = {"http://localhost", "http://localhost:5173/", "http://localhost:3000/"})
 public class UserRestController {
-    @Autowired
     private final UserServiceImpl userService;
 
     @GetMapping
@@ -58,7 +58,7 @@ public class UserRestController {
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity deleteTaskByID(@PathVariable Long id) {
+    public ResponseEntity<User> deleteUserByID(@PathVariable Long id) {
         try {
             userService.deleteUserByID(id);
             return new ResponseEntity<>(HttpStatus.OK);
@@ -68,7 +68,7 @@ public class UserRestController {
     }
 
     @DeleteMapping
-    public ResponseEntity deleteUser(@RequestBody User user) {
+    public ResponseEntity<User> deleteUser(@RequestBody User user) {
         try {
             userService.deleteUser(user);
             return new ResponseEntity<>(HttpStatus.OK);

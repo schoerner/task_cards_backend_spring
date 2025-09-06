@@ -1,7 +1,6 @@
 package de.acosci.tasks.controller.rest;
 
 import de.acosci.tasks.model.entity.Project;
-import de.acosci.tasks.model.entity.Task;
 import de.acosci.tasks.service.ProjectService;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
@@ -14,6 +13,7 @@ import java.util.List;
 
 @RestController
 @RequestMapping("api/projects")
+//@PreAuthorize("hasRole('MODERATOR')")  // Optional, filtered via FilterChain
 @RequiredArgsConstructor
 public class ProjectRestController {
     @Autowired
@@ -40,7 +40,16 @@ public class ProjectRestController {
     @GetMapping("/user/{userId}")
     public ResponseEntity<List<Project>> getAllProjectsByUserID(@PathVariable Long userId) {
         try {
-            return new ResponseEntity<>(projectService.getAllProjectsByUserID(userId), HttpStatus.OK);
+            return new ResponseEntity<>(projectService.getAllProjectsByUsersID(userId), HttpStatus.OK);
+        } catch (EntityNotFoundException e) {
+            return ResponseEntity.notFound().build();
+        }
+    }
+
+    @GetMapping("/creator/{userId}")
+    public ResponseEntity<List<Project>> getAllProjectsByCreatorD(@PathVariable Long userId) {
+        try {
+            return new ResponseEntity<>(projectService.getAllProjectsByCreatorID(userId), HttpStatus.OK);
         } catch (EntityNotFoundException e) {
             return ResponseEntity.notFound().build();
         }
@@ -60,6 +69,17 @@ public class ProjectRestController {
         try {
             return new ResponseEntity<>(projectService.save(project), HttpStatus.OK);
         } catch(Exception e) {
+            return ResponseEntity.badRequest().build();
+        }
+    }
+
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Project> deleteByID(@PathVariable Long id) {
+        try {
+            projectService.deleteById(id);
+            return new ResponseEntity<>(HttpStatus.OK);
+        } catch (Exception e) {
             return ResponseEntity.badRequest().build();
         }
     }

@@ -6,6 +6,7 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationProvider;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
@@ -32,11 +33,15 @@ public class SecurityConfiguration {
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
-                .csrf(csrf -> csrf.disable())
+                .csrf(AbstractHttpConfigurer::disable)
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/api/auth/**").permitAll()          // Auth-Endpoints
                         .requestMatchers("/actuator/health").permitAll()      // Health Check ohne Auth
-                        .anyRequest().authenticated()                         // Alles andere geschützt
+                        .requestMatchers("/api/auth/**").permitAll()          // Auth-Endpoints
+                        .requestMatchers("/api/admin/**").hasRole("ADMIN")    // Rollenprüfung
+                        .requestMatchers("/api/tasks/**").hasAnyRole("USER", "MODERATOR", "ADMIN")    // Rollenprüfung
+                        .requestMatchers("/api/projects/**").hasAnyRole("MODERATOR", "ADMIN")    // Rollenprüfung
+                        .requestMatchers("/api/user/**").hasAnyRole("USER", "MODERATOR", "ADMIN")
+                        .anyRequest().authenticated()                           // Alles andere geschützt
                 )
                 .sessionManagement(session -> session
                         .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
@@ -46,27 +51,6 @@ public class SecurityConfiguration {
 
         return http.build();
     }
-    /*
-    @Bean
-    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
-        http.csrf()
-                .disable()
-                .authorizeHttpRequests()
-                .requestMatchers("/api/auth/**")
-                .permitAll()
-                .anyRequest()
-                .authenticated()
-                .and()
-                .sessionManagement()
-                .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
-                .and()
-                .authenticationProvider(authenticationProvider)
-                .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
-
-        return http.build();
-    }
-
-     */
 
     @Bean
     CorsConfigurationSource corsConfigurationSource() {

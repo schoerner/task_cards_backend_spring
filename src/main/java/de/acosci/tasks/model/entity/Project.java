@@ -22,6 +22,10 @@ public class Project {
     private Long id;
     private String name;
 
+    @ManyToOne
+    @JoinColumn(name = "creator_user_id")
+    private User creator;
+
     @JsonIgnore
     @OneToMany(mappedBy = "project", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Task> tasks = new ArrayList<>();

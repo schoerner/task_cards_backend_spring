@@ -5,12 +5,17 @@ import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
 import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 
 import java.util.*;
+import java.util.stream.Collectors;
 
+/**
+ * TODO UserDetails sollten niemals per Request oder Response verwendet werden => DTOs verwenden
+ */
 @Entity
-@Table(name="users")
+@Table(name = "users")
 // todo Info @Data Problem with Circular References
 // <=> ManyToMany && JPA => StackOverflowError -> https://stackoverflow.com/questions/62585553/java-spring-boot-jpa-stackoverflowerror-with-a-manytomany-relation
 // => Implement/generate toString, hashCode and equals
@@ -23,7 +28,7 @@ public class User implements UserDetails {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(unique=true)
+    @Column(unique = true)
     private String email;
 
     @CreationTimestamp
@@ -42,13 +47,6 @@ public class User implements UserDetails {
     @Column(name = "last_name", nullable = false, length = 50)
     private String lastName;
 
-    public boolean arePasswordsMatching() {
-        return password.equals(password_verification);
-    }
-    public boolean hasStrongPassword() {
-        return password.length() >= 4;
-    }
-
     // Strategie 2 von: https://www.baeldung.com/jpa-one-to-one
     @OneToOne(mappedBy = "user", cascade = CascadeType.ALL)//, orphanRemoval = true)
     //@JoinColumn(name = "user_profile_id")// optional, da automatisch generiert: , referencedColumnName = "id")
@@ -60,12 +58,51 @@ public class User implements UserDetails {
     private List<Task> tasks = new ArrayList<>();
 
     @JsonIgnore
+    @OneToMany(mappedBy = "creator")
+    private Set<Task> createdProjects = new HashSet<>();
+
+    @JsonIgnore
     @ManyToMany(mappedBy = "users") // User is not the owner of the relation
     private Set<Project> projects = new HashSet<>();
 
+    @ManyToMany(fetch = FetchType.EAGER)
+    @JoinTable(
+            name = "user_roles",
+            joinColumns = @JoinColumn(name = "user_id"),
+            inverseJoinColumns = @JoinColumn(name = "role_id")
+    )
+    private Set<Role> roles = new HashSet<>();
+
+    @JsonIgnore
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
-        return List.of();
+        return roles.stream()
+                .map(role -> new SimpleGrantedAuthority(role.getName().name()))
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    @JsonIgnore
+    public boolean isAccountNonExpired() {
+        return true;
+    }
+
+    @Override
+    @JsonIgnore
+    public boolean isAccountNonLocked() {
+        return true;
+    }
+
+    @Override
+    @JsonIgnore
+    public boolean isCredentialsNonExpired() {
+        return true;
+    }
+
+    @Override
+    @JsonIgnore
+    public boolean isEnabled() {
+        return true;
     }
 
     @Override
@@ -73,17 +110,7 @@ public class User implements UserDetails {
         return email;
     }
 
-    /* https://www.youtube.com/watch?v=CvDS6DltIno
-
-    todo
-    @ManyToMany
-    @JoinTable(
-        name = "user_permissions",
-        joinColumns = @JoinColumn(name = "user_id"),
-        inverseJoinColumns = @JoinColumn(name = "permission_id")
-    )
-    private Set<Permission> permissions;
-    */
+    /* https://www.youtube.com/watch?v=CvDS6DltIno */
 
     @Override
     public boolean equals(Object o) {

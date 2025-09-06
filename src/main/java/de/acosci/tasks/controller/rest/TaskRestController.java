@@ -13,13 +13,14 @@ import java.util.List;
 
 /**
  * Source: https://spring.io/guides/tutorials/rest
- *
+ * <p>
  * Cross-Origin Resource Sharing (CORS)
  * https://stackoverflow.com/questions/39623211/add-multiple-cross-origin-urls-in-spring-boot
  * https://www.youtube.com/watch?app=desktop&v=HRwlT_etr60
  */
 @RestController
 @RequestMapping("api/tasks")
+//@PreAuthorize("hasRole('USER')")  // Optional, filtered via FilterChain
 @RequiredArgsConstructor
 @CrossOrigin(origins = {"http://localhost", "http://localhost:5173/", "http://localhost:3000/"})
 public class TaskRestController {
@@ -73,50 +74,50 @@ public class TaskRestController {
         }
     }
 
-//@CrossOrigin(origins = "http://localhost:5173")
-@GetMapping("/{id}")
-public ResponseEntity<Task> getTaskByID(@PathVariable Long id) {
-    try {
-        return new ResponseEntity<Task>(taskService.getTaskByID(id), HttpStatus.OK);
-    } catch (EntityNotFoundException e) {
-        return ResponseEntity.notFound().build();
+    //@CrossOrigin(origins = "http://localhost:5173")
+    @GetMapping("/{id}")
+    public ResponseEntity<Task> getTaskByID(@PathVariable Long id) {
+        try {
+            return new ResponseEntity<Task>(taskService.getTaskByID(id), HttpStatus.OK);
+        } catch (EntityNotFoundException e) {
+            return ResponseEntity.notFound().build();
+        }
     }
-}
 
-@PostMapping
-public ResponseEntity<Task> saveNewTask(@RequestBody Task task) {
-    try {
-        return new ResponseEntity<Task>(taskService.saveTask(task), HttpStatus.OK);
-    } catch(Exception e) { // todo
-        return ResponseEntity.badRequest().build();
+    @PostMapping
+    public ResponseEntity<Task> saveNewTask(@RequestBody Task task) {
+        try {
+            return new ResponseEntity<Task>(taskService.saveTask(task), HttpStatus.OK);
+        } catch (Exception e) { // todo
+            return ResponseEntity.badRequest().build();
+        }
     }
-}
 
-@PutMapping
-public ResponseEntity<Task> updateTaskByID(@RequestBody Task task) {
-    try {
-        return new ResponseEntity<Task>(taskService.saveTask(task), HttpStatus.OK);
-    } catch(Exception e) { // todo
-        return ResponseEntity.badRequest().build();
+    @PutMapping
+    public ResponseEntity<Task> updateTaskByID(@RequestBody Task task) {
+        try {
+            return new ResponseEntity<Task>(taskService.saveTask(task), HttpStatus.OK);
+        } catch (Exception e) { // todo
+            return ResponseEntity.badRequest().build();
+        }
     }
-}
 
-@DeleteMapping("/{id}")
-public ResponseEntity deleteTaskByID(@PathVariable Long id) {
-    try {
-        taskService.deleteTaskByID(id);
-        return new ResponseEntity<>(HttpStatus.OK);
-    } catch(Exception e) { // todo
-        return ResponseEntity.badRequest().build();
+    @DeleteMapping("/{id}")
+    public ResponseEntity deleteTaskByID(@PathVariable Long id) {
+        try {
+            taskService.deleteTaskByID(id);
+            return new ResponseEntity<>(HttpStatus.OK);
+        } catch (Exception e) { // todo
+            return ResponseEntity.badRequest().build();
+        }
     }
-}
 
     @DeleteMapping
     public ResponseEntity deleteTask(@RequestBody Task task) {
         try {
             taskService.deleteTask(task);
             return new ResponseEntity<>(HttpStatus.OK);
-        } catch(Exception e) { // todo
+        } catch (Exception e) { // todo
             return ResponseEntity.badRequest().build();
         }
     }

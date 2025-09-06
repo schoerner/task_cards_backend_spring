@@ -7,8 +7,10 @@ import java.util.List;
 
 public interface ProjectService {
     List<Project> findAll();
-    List<Project> getAllProjectsByUserID(Long userID);
+    List<Project> getAllProjectsByUsersID(Long userID);
+    List<Project> getAllProjectsByCreatorID(Long userID);
     Project findById(Long id);
     Project save(Project project);
+    void deleteById(Long id);
     void delete(Project project);
 }

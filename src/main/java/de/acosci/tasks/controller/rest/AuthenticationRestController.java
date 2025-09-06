@@ -30,7 +30,9 @@ public class AuthenticationRestController {
         try {
             User registeredUser = authenticationService.signup(registerUserDto);
             return ResponseEntity.ok(registeredUser);
-        } catch (Exception e) {
+        } catch (RuntimeException e) {
+            return ResponseEntity.notFound().build();
+        }catch (Exception e) {
             return new ResponseEntity<>(HttpStatus.CONFLICT);
         }
     }
