@@ -3,17 +3,12 @@ package de.acosci.tasks.repository;
 import de.acosci.tasks.model.entity.Project;
 import de.acosci.tasks.model.entity.Task;
 import de.acosci.tasks.model.entity.User;
-import de.acosci.tasks.service.impl.TaskServiceImpl;
-import jakarta.transaction.Transactional;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
-import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.TestPropertySource;
-import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
 import java.util.ArrayList;
 import java.util.Date;
@@ -66,7 +61,7 @@ class TaskRepositoryTest {
 
         project1.setName("Projekt1");
         project1.setTasks(new ArrayList<>());
-        project1.setUsers(new HashSet<>());
+        project1.setMembers(new HashSet<>());
     }
 
     @AfterEach
@@ -95,23 +90,23 @@ class TaskRepositoryTest {
         assertEquals(1, projectRepository.count());
 
 
-        assertTrue(project1.getUsers().add(user1));
-        assertEquals(1, projectRepository.findById(insertedProject1.getId()).get().getUsers().size());
+        assertTrue(project1.getMembers().add(user1));
+        assertEquals(1, projectRepository.findById(insertedProject1.getId()).get().getMembers().size());
 
-        assertFalse(project1.getUsers().add(user1));
-        assertTrue(project1.getUsers().remove(user1));
+        assertFalse(project1.getMembers().add(user1));
+        assertTrue(project1.getMembers().remove(user1));
         insertedProject1 = projectRepository.save(project1);
-        assertEquals(0, projectRepository.findById(insertedProject1.getId()).get().getUsers().size());
+        assertEquals(0, projectRepository.findById(insertedProject1.getId()).get().getMembers().size());
 
     }
 
     @Test
     void aProjectWith2TasksWithAnUserAndCreatorEach() {
-        assertTrue(project1.getUsers().add(user1));
-        assertFalse(project1.getUsers().add(user1));
-        assertTrue(project1.getUsers().add(user2));
-        assertTrue(project1.getUsers().contains(user1));
-        assertTrue(project1.getUsers().contains(user2));
+        assertTrue(project1.getMembers().add(user1));
+        assertFalse(project1.getMembers().add(user1));
+        assertTrue(project1.getMembers().add(user2));
+        assertTrue(project1.getMembers().contains(user1));
+        assertTrue(project1.getMembers().contains(user2));
 
         task1.setTitle("Task1");
         task1.setDescription("Task1 of user 1 description");
@@ -144,7 +139,7 @@ class TaskRepositoryTest {
         Project insertedProject1 = projectRepository.save(project1);
         assertNotNull(insertedProject1.getId());
         assertEquals(project1, insertedProject1);
-        assertEquals(2, projectRepository.findById(insertedProject1.getId()).get().getUsers().size());
+        assertEquals(2, projectRepository.findById(insertedProject1.getId()).get().getMembers().size());
 
         assertEquals(1, projectRepository.count());
         taskRepository.save(task1);

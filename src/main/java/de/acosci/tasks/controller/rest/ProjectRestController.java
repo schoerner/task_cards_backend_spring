@@ -1,12 +1,11 @@
 package de.acosci.tasks.controller.rest;
 
 import de.acosci.tasks.model.entity.Project;
+import de.acosci.tasks.model.entity.User;
 import de.acosci.tasks.service.ProjectService;
-import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -16,81 +15,48 @@ import java.util.List;
 //@PreAuthorize("hasRole('MODERATOR')")  // Optional, filtered via FilterChain
 @RequiredArgsConstructor
 public class ProjectRestController {
-    @Autowired
-    private ProjectService projectService;
+    private final ProjectService projectService;
 
-    @GetMapping
-    public ResponseEntity<List<Project>> findAll() {
-        try {
-            return new ResponseEntity<>(projectService.findAll(), HttpStatus.OK);
-        } catch (EntityNotFoundException e) {
-            return ResponseEntity.badRequest().build();
-        }
+    /** Member can access the projects they are participating on. */
+    @GetMapping("/my")
+    public ResponseEntity<List<Project>> getMyProjects() {
+        /* Get the current, logged in user from the security context to avoid IDOR (Insecure Direct Object Reference)
+         * access control vulnerability.
+         */
+        User current = (User) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+        return ResponseEntity.ok(projectService.getAllProjectsByMembersID(current.getId()));
+    }
+
+    /** Creators ar owners of projects, they get their projects here. */
+    @GetMapping("/my-owned")
+    public ResponseEntity<List<Project>> getMyOwnedProjects() {
+        User current = (User) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+        return ResponseEntity.ok(projectService.getAllProjectsByCreatorID(current.getId()));
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<Project> getByID(@PathVariable Long id) {
-        try {
-            return new ResponseEntity<>(projectService.findById(id), HttpStatus.OK);
-        } catch (EntityNotFoundException e) {
-            return ResponseEntity.notFound().build();
-        }
+    public ResponseEntity<Project> getProject(@PathVariable Long id) {
+        return ResponseEntity.ok(projectService.findById(id));
     }
 
-    @GetMapping("/user/{userId}")
-    public ResponseEntity<List<Project>> getAllProjectsByUserID(@PathVariable Long userId) {
-        try {
-            return new ResponseEntity<>(projectService.getAllProjectsByUsersID(userId), HttpStatus.OK);
-        } catch (EntityNotFoundException e) {
-            return ResponseEntity.notFound().build();
-        }
-    }
-
-    @GetMapping("/creator/{userId}")
-    public ResponseEntity<List<Project>> getAllProjectsByCreatorD(@PathVariable Long userId) {
-        try {
-            return new ResponseEntity<>(projectService.getAllProjectsByCreatorID(userId), HttpStatus.OK);
-        } catch (EntityNotFoundException e) {
-            return ResponseEntity.notFound().build();
-        }
-    }
-
+    /** Admins and moderators are able to create projects. */
     @PostMapping
-    public ResponseEntity<Project> save(@RequestBody Project project){
-        try {
-            return new ResponseEntity<>(projectService.save(project), HttpStatus.OK);
-        } catch(Exception e) {
-            return ResponseEntity.badRequest().build();
-        }
+    public ResponseEntity<Project> createProject(@RequestBody Project project) {
+        // Creator wird im Service aus SecurityContext gesetzt
+        return ResponseEntity.ok(projectService.save(project));
     }
 
-    @PutMapping
-    public ResponseEntity<Project> update(@RequestBody Project project){
-        try {
-            return new ResponseEntity<>(projectService.save(project), HttpStatus.OK);
-        } catch(Exception e) {
-            return ResponseEntity.badRequest().build();
-        }
+    /** Update projects. */
+    @PutMapping("/{id}")
+    public ResponseEntity<Project> updateProject(@PathVariable Long id, @RequestBody Project project) {
+        project.setId(id);
+        return ResponseEntity.ok(projectService.save(project));
     }
 
-
+    /** Delete projects by owners or admins. */
     @DeleteMapping("/{id}")
-    public ResponseEntity<Project> deleteByID(@PathVariable Long id) {
-        try {
-            projectService.deleteById(id);
-            return new ResponseEntity<>(HttpStatus.OK);
-        } catch (Exception e) {
-            return ResponseEntity.badRequest().build();
-        }
-    }
-
-    @DeleteMapping
-    public ResponseEntity<Project> delete(@RequestBody Project project) {
-        try {
-            projectService.delete(project);
-            return new ResponseEntity<>(HttpStatus.OK);
-        } catch(Exception e) { // todo
-            return ResponseEntity.badRequest().build();
-        }
+    public ResponseEntity<Void> deleteProject(@PathVariable Long id) {
+        projectService.deleteById(id);
+        return ResponseEntity.ok().build();
     }
 }

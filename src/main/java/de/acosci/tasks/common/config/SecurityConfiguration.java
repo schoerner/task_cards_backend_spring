@@ -39,7 +39,7 @@ public class SecurityConfiguration {
                         .requestMatchers("/api/auth/**").permitAll()          // Auth-Endpoints
                         .requestMatchers("/api/admin/**").hasRole("ADMIN")    // Rollenprüfung
                         .requestMatchers("/api/tasks/**").hasAnyRole("USER", "MODERATOR", "ADMIN")    // Rollenprüfung
-                        .requestMatchers("/api/projects/**").hasAnyRole("MODERATOR", "ADMIN")    // Rollenprüfung
+                        .requestMatchers("/api/projects/**").hasAnyRole("USER", "MODERATOR", "ADMIN")    // Rollenprüfung
                         .requestMatchers("/api/user/**").hasAnyRole("USER", "MODERATOR", "ADMIN")
                         .anyRequest().authenticated()                           // Alles andere geschützt
                 )

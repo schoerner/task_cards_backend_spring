@@ -38,9 +38,9 @@ at org.mariadb.jdbc.export.ExceptionFactory.createException(ExceptionFactory.jav
      */
     @ManyToMany//(cascade = {CascadeType.DETACH, CascadeType.MERGE, CascadeType.PERSIST, CascadeType.REFRESH})
     @JoinTable(
-            name = "project_users",
+            name = "project_members",
             joinColumns = @JoinColumn(name = "project_id"),
             inverseJoinColumns = @JoinColumn(name = "user_id")
     )
-    private Set<User> users = new HashSet<>();
+    private Set<User> members = new HashSet<>();
 }

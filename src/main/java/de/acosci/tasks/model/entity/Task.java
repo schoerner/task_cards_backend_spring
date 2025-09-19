@@ -9,7 +9,9 @@ import org.hibernate.annotations.OnDelete;
 import org.hibernate.annotations.OnDeleteAction;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 @NoArgsConstructor
 @AllArgsConstructor
@@ -22,12 +24,21 @@ public class Task {
     private Long id;
 
     private String title;
-
     private String description;
+    private Double processInPercentage;
+    private Boolean completed;
 
     @ManyToOne
     @JoinColumn(name = "creator_user_id")
     private User creator;
+
+    @ManyToMany
+    @JoinTable(
+            name = "task_assignees",
+            joinColumns = @JoinColumn(name = "project_id"),
+            inverseJoinColumns = @JoinColumn(name = "user_id")
+    )
+    private Set<User> assignees = new HashSet<>();
 
     // Wichtig: @JsonIgnore darf hier nicht stehen, wenn Projekt-ID mitgegeben werden soll
     @ManyToOne
@@ -42,4 +53,15 @@ public class Task {
     // MVP Minimal viable Product
     @Transient
     private boolean active;
+
+
+    // Reflexive relation
+    @JsonIgnore
+    @ManyToOne
+    @JoinColumn(name = "predecessor_id", nullable = true)
+    private Task predecessor;
+
+    @JsonIgnore
+    @OneToMany(mappedBy = "predecessor")
+    private List<Task> successors = new ArrayList<>();
 }

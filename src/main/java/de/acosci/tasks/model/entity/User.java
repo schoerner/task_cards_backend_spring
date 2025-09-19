@@ -58,11 +58,15 @@ public class User implements UserDetails {
     private List<Task> tasks = new ArrayList<>();
 
     @JsonIgnore
+    @ManyToMany(mappedBy = "assignees")
+    private Set<Task> assignedTasks = new HashSet<>();
+
+    @JsonIgnore
     @OneToMany(mappedBy = "creator")
     private Set<Task> createdProjects = new HashSet<>();
 
     @JsonIgnore
-    @ManyToMany(mappedBy = "users") // User is not the owner of the relation
+    @ManyToMany(mappedBy = "members") // User is not the owner of the relation
     private Set<Project> projects = new HashSet<>();
 
     @ManyToMany(fetch = FetchType.EAGER)

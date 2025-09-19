@@ -13,7 +13,7 @@ public interface ProjectRepository extends JpaRepository<Project, Long> {
     @Modifying
     void delete(@Param("project") Project project);
      */
-    List<Project> findByUsers_Id(Long userID);
+    List<Project> findByMembers_Id(Long userID);
 
     List<Project> findByCreator_Id(Long userID);
 }

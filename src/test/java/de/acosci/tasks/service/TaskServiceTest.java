@@ -3,6 +3,7 @@ package de.acosci.tasks.service;
 import de.acosci.tasks.model.entity.*;
 import de.acosci.tasks.repository.TaskRepository;
 import de.acosci.tasks.repository.TimeRecordRepository;
+import de.acosci.tasks.repository.UserRepository;
 import de.acosci.tasks.service.impl.TaskServiceImpl;
 import jakarta.persistence.EntityNotFoundException;
 import org.junit.jupiter.api.BeforeEach;
@@ -22,17 +23,19 @@ IOC-Container
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.NONE, classes = {TaskServiceImpl.class}) // Embedded webserver wird für Test nicht hochgefahren
 class TaskServiceTest {
 
-    @MockitoBean
+    @MockitoBean // Beans the Service under test depends on
     private TaskRepository taskRepository;
     @MockitoBean
     private TimeRecordRepository timeRecordRepository;
+    @MockitoBean
+    private UserRepository userRepository;
 
     @Autowired
     private TaskServiceImpl taskService;
 
-    private final User mockUser = new User(1L, "test@test.org", new Date(), "Geheim01", "Geheim01", "John", "Doe", new UserProfile(), new ArrayList<Task>(), new HashSet<>(), new HashSet<>(), new HashSet<>());
-    private final Task mockTask1 = new Task(1L, "Test Task 1", "Description for Test Task 1", mockUser, new Project(), new ArrayList<>(), false);
-    private final Task mockTask2 = new Task(2L, "Test Task 2", "Description for Test Task 1", mockUser, new Project(), new ArrayList<>(), false);
+    private final User mockUser = new User(1L, "test@test.org", new Date(), "Geheim01", "Geheim01", "John", "Doe", new UserProfile(), new ArrayList<Task>(), new HashSet<>(), new HashSet<>(), new HashSet<>(), new HashSet<>());
+    private final Task mockTask1 = new Task(1L, "Test Task 1", "Description for Test Task 1", 20d, false, mockUser, new HashSet<>(), new Project(), new ArrayList<>(), false, null, new ArrayList<>());
+    private final Task mockTask2 = new Task(2L, "Test Task 2", "Description for Test Task 1", 80d, false, mockUser, new HashSet<>(), new Project(), new ArrayList<>(), false, null, new ArrayList<>());
 
     @BeforeEach
     void setUp() {
@@ -97,7 +100,7 @@ class TaskServiceTest {
         when(taskRepository.save(mockTask1)).thenReturn(mockTask1);
 
         // Act
-        Task startedTask = taskService.startTask(mockTask1);
+        Task startedTask = taskService.startTask(mockTask1.getId());
         var activeTasks = taskService.getActiveTasks();
         boolean isActive = taskService.isActive(mockTask1);
         TimeRecord activeTimeRecord = taskService.getActiveTimeRecord(mockTask1);
@@ -173,8 +176,8 @@ class TaskServiceTest {
         when(taskRepository.save(mockTask1)).thenReturn(mockTask1);
 
         // Act
-        Task startedTask = taskService.startTask(mockTask1);
-        Task stoppedTask = taskService.stopTask(mockTask1);
+        Task startedTask = taskService.startTask(mockTask1.getId());
+        Task stoppedTask = taskService.stopTask(mockTask1.getId());
         var activeTasks = taskService.getActiveTasks();
         boolean isActive = taskService.isActive(mockTask1);
         TimeRecord activeTimeRecord = taskService.getActiveTimeRecord(mockTask1);
