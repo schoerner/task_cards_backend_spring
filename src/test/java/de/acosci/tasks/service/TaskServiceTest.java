@@ -6,10 +6,14 @@ import de.acosci.tasks.repository.TimeRecordRepository;
 import de.acosci.tasks.repository.UserRepository;
 import de.acosci.tasks.service.impl.TaskServiceImpl;
 import jakarta.persistence.EntityNotFoundException;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.context.SecurityContext;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
 import java.util.*;
@@ -33,14 +37,28 @@ class TaskServiceTest {
     @Autowired
     private TaskServiceImpl taskService;
 
-    private final User mockUser = new User(1L, "test@test.org", new Date(), "Geheim01", "Geheim01", "John", "Doe", new UserProfile(), new ArrayList<Task>(), new HashSet<>(), new HashSet<>(), new HashSet<>(), new HashSet<>());
+    private final User mockUser = new User(1L, "test@test.org", new Date(), "Geheim01", "Geheim01", "John", "Doe", new UserProfile(), new ArrayList<>(), new HashSet<>(), new HashSet<>(), new HashSet<>(), new HashSet<>());
     private final Task mockTask1 = new Task(1L, "Test Task 1", "Description for Test Task 1", 20d, false, mockUser, new HashSet<>(), new Project(), new ArrayList<>(), false, null, new ArrayList<>());
     private final Task mockTask2 = new Task(2L, "Test Task 2", "Description for Test Task 1", 80d, false, mockUser, new HashSet<>(), new Project(), new ArrayList<>(), false, null, new ArrayList<>());
 
     @BeforeEach
     void setUp() {
+        mockUser.getTasks().clear();
         mockUser.getTasks().add(mockTask1);
         mockUser.getTasks().add(mockTask2);
+
+        SecurityContext context = SecurityContextHolder.createEmptyContext();
+        context.setAuthentication(
+                new UsernamePasswordAuthenticationToken(mockUser.getEmail(), null, Collections.emptyList())
+        );
+        SecurityContextHolder.setContext(context);
+
+        when(userRepository.findByEmail(mockUser.getEmail())).thenReturn(Optional.of(mockUser));
+    }
+
+    @AfterEach
+    void tearDown() {
+        SecurityContextHolder.clearContext();
     }
 
     @Test
@@ -58,8 +76,6 @@ class TaskServiceTest {
 
     @Test
     void getTaskById_butTaskNotFound() {
-        Task nonExistent = new Task();
-
         //assertThrows(EntityNotFoundException.class, () -> taskService.isActive(nonExistent));
         assertThrows(EntityNotFoundException.class, () -> taskService.isActive(-1L));
     }
@@ -151,7 +167,6 @@ class TaskServiceTest {
         when(taskRepository.save(mockTask1)).thenReturn(mockTask1);
 
         // Act
-        Task startedTask = taskService.startTask(1L);
         Task stoppedTask = taskService.stopTask(1L);
         var activeTasks = taskService.getActiveTasks();
         boolean isActive = taskService.isActive(1L);
@@ -183,6 +198,7 @@ class TaskServiceTest {
         TimeRecord activeTimeRecord = taskService.getActiveTimeRecord(mockTask1);
 
         // Assert
+        assertNotNull(startedTask);
         assertNotNull(stoppedTask);
         assertFalse(stoppedTask.isActive());
         assertNotNull(activeTasks);
