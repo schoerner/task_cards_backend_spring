@@ -33,3 +33,4 @@ build/
 .vscode/
 *.bkp
 /src/main/resources/application-local.properties
+/.env
