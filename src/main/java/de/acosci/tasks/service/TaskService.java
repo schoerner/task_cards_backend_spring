@@ -5,6 +5,7 @@ import de.acosci.tasks.model.entity.TimeRecord;
 import org.springframework.security.access.prepost.PreAuthorize;
 
 import java.util.List;
+import java.util.Map;
 
 /*
 
@@ -17,6 +18,7 @@ public interface TaskService {
     Task saveTask(Task task) throws Exception;
     Task getTaskByID(Long id);
     Task updateTask(Task task);
+    Task patchTask(Long id, Map<String, Object> updates);
     void deleteTaskByID(Long id);
     void deleteTask(Task task);
     TimeRecord getActiveTimeRecord(Long taskID);
@@ -25,4 +27,5 @@ public interface TaskService {
     Boolean isActive(Task task);
     Task startTask(Long taskId);
     Task stopTask(Long taskId);
+
 }

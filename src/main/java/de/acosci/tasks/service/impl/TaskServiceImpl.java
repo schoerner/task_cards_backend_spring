@@ -16,8 +16,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
-import java.util.Date;
-import java.util.List;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
@@ -141,6 +140,109 @@ public class TaskServiceImpl implements TaskService {
         existing.setCompleted(task.getCompleted());
         existing.setAssignees(task.getAssignees());
         existing.setProject(task.getProject());
+
+        return taskRepository.save(existing);
+    }
+
+    @PreAuthorize("hasAnyRole('MODERATOR','ADMIN')")
+    @Override
+    public Task patchTask(Long id, Map<String, Object> updates) {
+        User currentUser = getCurrentUser();
+
+        Task existing = taskRepository.findById(id)
+                .orElseThrow(() -> new EntityNotFoundException("Task not found with id " + id));
+
+        ensureCanModify(existing, currentUser);
+
+        if (updates == null || updates.isEmpty()) {
+            throw new IllegalArgumentException("No updates provided");
+        }
+
+        for (Map.Entry<String, Object> entry : updates.entrySet()) {
+            String field = entry.getKey();
+            Object value = entry.getValue();
+
+            switch (field) {
+
+                case "title" -> {
+                    if (value == null) {
+                        existing.setTitle(null);
+                    } else if (value instanceof String s) {
+                        existing.setTitle(s);
+                    } else {
+                        throw new IllegalArgumentException("title must be a string");
+                    }
+                }
+
+                case "description" -> {
+                    if (value == null) {
+                        existing.setDescription(null);
+                    } else if (value instanceof String s) {
+                        existing.setDescription(s);
+                    } else {
+                        throw new IllegalArgumentException("description must be a string");
+                    }
+                }
+
+                case "processInPercentage" -> {
+                    if (value == null) {
+                        existing.setProcessInPercentage(null); // falls Integer/Wrapper; sonst anpassen
+                    } else if (value instanceof Double n) {
+                        double p = n.doubleValue();
+                        if (p < 0 || p > 100) {
+                            throw new IllegalArgumentException("processInPercentage must be between 0 and 100");
+                        }
+                        existing.setProcessInPercentage(p);
+                    } else {
+                        throw new IllegalArgumentException("processInPercentage must be a number");
+                    }
+                }
+
+                case "completed" -> {
+                    if (value == null) {
+                        existing.setCompleted(null); // falls Boolean/Wrapper; sonst anpassen
+                    } else if (value instanceof Boolean b) {
+                        existing.setCompleted(b);
+                    } else {
+                        throw new IllegalArgumentException("completed must be boolean");
+                    }
+                }
+
+                /*
+                 * Optional: assignees als Liste von User-IDs patchen.
+                 * Beispiel-JSON: { "assignees": [3, 7, 9] }
+                 */
+                case "assignees" -> {
+                    if (value == null) {
+                        existing.setAssignees(new HashSet<>());
+                    } else if (value instanceof java.util.List<?> rawList) {
+                        List<Long> ids = new ArrayList<>();
+                        for (Object o : rawList) {
+                            if (o instanceof Number n) {
+                                ids.add(n.longValue());
+                            } else {
+                                throw new IllegalArgumentException("assignees must be an array of numeric user ids");
+                            }
+                        }
+                        Set<User> users = new HashSet<>(userRepository.findAllById(ids));
+                        if (users.size() != ids.size()) {
+                            throw new IllegalArgumentException("assignees contains unknown user ids");
+                        }
+                        existing.setAssignees(users);
+                    } else {
+                        throw new IllegalArgumentException("assignees must be an array");
+                    }
+                }
+
+                // Felder, die NICHT gepatcht werden dürfen
+                case "id", "creator", "timeRecords", "active", "project" -> {
+                    throw new IllegalArgumentException("Field '" + field + "' cannot be patched");
+                }
+
+                // Unbekannte Felder
+                default -> throw new IllegalArgumentException("Unknown field: " + field);
+            }
+        }
 
         return taskRepository.save(existing);
     }

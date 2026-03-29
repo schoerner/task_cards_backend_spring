@@ -9,9 +9,10 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 
 @RestController
-@RequestMapping("api/tasks")
+@RequestMapping("/api/tasks")
 @RequiredArgsConstructor
 @CrossOrigin(origins = {"http://localhost", "http://localhost:5173/", "http://localhost:3000/"})
 public class TaskRestController {
@@ -81,6 +82,23 @@ public class TaskRestController {
             return ResponseEntity.notFound().build();
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+        }
+    }
+
+    @PatchMapping("/{id}")
+    public ResponseEntity<Task> patchTask(
+            @PathVariable Long id,
+            @RequestBody Map<String, Object> updates) {
+
+        try {
+            Task patched = taskService.patchTask(id, updates);
+            return ResponseEntity.ok(patched); // 200
+        } catch (EntityNotFoundException e) {
+            return ResponseEntity.notFound().build(); // 404
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().build(); // 400 (z. B. ungültiges Feld/Format)
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).build(); // 403 (wie bei dir im Stil)
         }
     }
 
