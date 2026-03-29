@@ -36,11 +36,16 @@ public class SecurityConfiguration {
                 .csrf(AbstractHttpConfigurer::disable)
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/actuator/health").permitAll()      // Health Check ohne Auth
-                        .requestMatchers("/api/auth/**").permitAll()          // Auth-Endpoints
-                        .requestMatchers("/api/admin/**").hasRole("ADMIN")    // Rollenprüfung
-                        .requestMatchers("/api/tasks/**").hasAnyRole("USER", "MODERATOR", "ADMIN")    // Rollenprüfung
-                        .requestMatchers("/api/projects/**").hasAnyRole("USER", "MODERATOR", "ADMIN")    // Rollenprüfung
-                        .requestMatchers("/api/user/**").hasAnyRole("USER", "MODERATOR", "ADMIN")
+                        .requestMatchers("/api/v1/auth/login").permitAll()       // Auth-Endpoints
+                        .requestMatchers(
+                                "/swagger-ui.html",
+                                "/swagger-ui/**",
+                                "/api/api-docs/**"
+                        ).permitAll()
+                        .requestMatchers("/api/v1/admin/**").hasRole("ADMIN")    // Rollenprüfung
+                        .requestMatchers("/api/v1/tasks/**").hasAnyRole("USER", "MODERATOR", "ADMIN")    // Rollenprüfung
+                        .requestMatchers("/api/v1/projects/**").hasAnyRole("USER", "MODERATOR", "ADMIN")    // Rollenprüfung
+                        .requestMatchers("/api/v1/user/**").hasAnyRole("USER", "MODERATOR", "ADMIN")
                         .anyRequest().authenticated()                           // Alles andere geschützt
                 )
                 .sessionManagement(session -> session

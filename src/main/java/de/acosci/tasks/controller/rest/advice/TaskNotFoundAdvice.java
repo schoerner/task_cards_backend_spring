@@ -1,4 +1,4 @@
-package de.acosci.tasks.controller.rest;
+package de.acosci.tasks.controller.rest.advice;
 
 import de.acosci.tasks.repository.TaskNotFoundException;
 import org.springframework.http.HttpStatus;

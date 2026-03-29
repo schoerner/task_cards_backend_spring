@@ -18,6 +18,18 @@ APP_ADMIN_EMAIL=admin@example.com
 APP_ADMIN_PASSWORD=12345678
 ```
 
+## OpenAPI / Swagger
+
+The REST API documentation is available via Swagger UI at:
+
+http://localhost:8080/swagger-ui.html
+
+The OpenAPI specification in JSON format is available at:
+
+http://localhost:8080/api/api-docs
+
+
+
 ## Goals of this project
 - Didactical analysis of Spring Boot framework for ...
   - Layers of a modern Web Architecture

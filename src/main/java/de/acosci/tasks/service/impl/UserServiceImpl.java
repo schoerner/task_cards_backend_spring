@@ -4,16 +4,17 @@ import de.acosci.tasks.model.entity.User;
 import de.acosci.tasks.repository.UserRepository;
 import de.acosci.tasks.service.UserService;
 import jakarta.persistence.EntityNotFoundException;
+import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
 
+@RequiredArgsConstructor
 @Service
 public class UserServiceImpl implements UserService {
 
-    @Autowired // inject repository
-    private UserRepository userRepository;
+    private final UserRepository userRepository;
 
     @Override
     public List<User> getUsers() {
@@ -48,21 +49,4 @@ public class UserServiceImpl implements UserService {
         userRepository.deleteById(id);
     }
 
-    @Override
-    public void deleteUser(User user) {
-        userRepository.delete(user);
-    }
-
-/*
-    public String generateToken(@NonNull User user)
-    {
-
-    }
-
-    public Claims parseToke(@NonNull String token)
-    {
-
-    }
-
- */
 }
