@@ -167,17 +167,14 @@ class TaskServiceTest {
         when(taskRepository.save(mockTask1)).thenReturn(mockTask1);
 
         // Act
-        Task stoppedTask = taskService.stopTask(1L);
+        assertThrows(IllegalStateException.class, () -> taskService.stopTask(1L));
         var activeTasks = taskService.getActiveTasks();
         boolean isActive = taskService.isActive(1L);
         TimeRecord activeTimeRecord = taskService.getActiveTimeRecord(1L);
 
         // Assert
-        assertNotNull(stoppedTask);
-        assertFalse(stoppedTask.isActive());
         assertNotNull(activeTasks);
         assertEquals(0, activeTasks.size());
-        assertFalse(activeTasks.contains(stoppedTask));
         assertFalse(isActive);
         assertNull(activeTimeRecord);
     }
