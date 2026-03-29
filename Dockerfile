@@ -8,7 +8,7 @@ WORKDIR /app
 COPY pom.xml .
 
 # Lädt Maven-Dependencies (wird gecached, solange pom.xml gleich bleibt)
-RUN mvn -B -DskipTests package
+RUN mvn -B dependency:go-offline
 
 # Kopiert den Quellcode ins Image
 COPY src ./src
