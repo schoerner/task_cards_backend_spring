@@ -36,7 +36,12 @@ public class SecurityConfiguration {
                 .csrf(AbstractHttpConfigurer::disable)
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/actuator/health").permitAll()      // Health Check ohne Auth
-                        .requestMatchers("/api/auth/**").permitAll()          // Auth-Endpoints
+                        .requestMatchers("/api/auth/login").permitAll()       // Auth-Endpoints
+                        .requestMatchers(
+                                "/api/swagger-ui.html",
+                                "/api/swagger-ui/**",
+                                "/api/api-docs/**"
+                        ).permitAll()
                         .requestMatchers("/api/admin/**").hasRole("ADMIN")    // Rollenprüfung
                         .requestMatchers("/api/tasks/**").hasAnyRole("USER", "MODERATOR", "ADMIN")    // Rollenprüfung
                         .requestMatchers("/api/projects/**").hasAnyRole("USER", "MODERATOR", "ADMIN")    // Rollenprüfung
