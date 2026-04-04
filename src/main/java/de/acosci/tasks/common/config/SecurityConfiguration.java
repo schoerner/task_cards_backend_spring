@@ -49,7 +49,7 @@ public class SecurityConfiguration {
                         .requestMatchers("/api/v1/admin/**").hasRole("ADMIN")
                         .requestMatchers("/api/v1/tasks/**").hasAnyRole("USER", "MODERATOR", "ADMIN")
                         .requestMatchers("/api/v1/projects/**").hasAnyRole("USER", "MODERATOR", "ADMIN")
-                        .requestMatchers("/api/v1/user/**").hasAnyRole("USER", "MODERATOR", "ADMIN")
+                        .requestMatchers("/api/v1/users/**").hasAnyRole("USER", "MODERATOR", "ADMIN")
                         .anyRequest().authenticated()
                 )
                 .sessionManagement(session -> session
@@ -67,7 +67,9 @@ public class SecurityConfiguration {
 
         configuration.setAllowedOrigins(List.of(
                 "https://task.acosci.de",
-                "http://localhost:5173"
+                "http://localhost:5173",
+                "http://localhost",
+                "http://localhost:3000"
         ));
         configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
         configuration.setAllowedHeaders(List.of("*"));

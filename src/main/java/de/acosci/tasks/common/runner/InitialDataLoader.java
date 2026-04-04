@@ -45,6 +45,12 @@ public class InitialDataLoader implements CommandLineRunner {
             roles.add(roleRepository.findByName(Role.RoleName.ROLE_ADMIN).orElseThrow(
                     () -> new RuntimeException("Role not found")
             ));
+            roles.add(roleRepository.findByName(Role.RoleName.ROLE_MODERATOR).orElseThrow(
+                    () -> new RuntimeException("Role not found")
+            ));
+            roles.add(roleRepository.findByName(Role.RoleName.ROLE_USER).orElseThrow(
+                    () -> new RuntimeException("Role not found")
+            ));
             admin.setRoles(roles);
 
             userRepository.save(admin);

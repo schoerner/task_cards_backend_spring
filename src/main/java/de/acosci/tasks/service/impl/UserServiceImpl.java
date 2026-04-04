@@ -1,11 +1,12 @@
 package de.acosci.tasks.service.impl;
 
+import de.acosci.tasks.model.dto.ChangePasswordDTO;
 import de.acosci.tasks.model.entity.User;
 import de.acosci.tasks.repository.UserRepository;
 import de.acosci.tasks.service.UserService;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
-import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -15,6 +16,7 @@ import java.util.List;
 public class UserServiceImpl implements UserService {
 
     private final UserRepository userRepository;
+    private final PasswordEncoder passwordEncoder;
 
     @Override
     public List<User> getUsers() {
@@ -47,6 +49,22 @@ public class UserServiceImpl implements UserService {
     @Override
     public void deleteUserByID(Long id) {
         userRepository.deleteById(id);
+    }
+
+    @Override
+    public void changePassword(Long id, ChangePasswordDTO dto) {
+        User user = getUserByID(id);
+
+        if (!passwordEncoder.matches(dto.getCurrentPassword(), user.getPassword())) {
+            throw new IllegalArgumentException("Das aktuelle Passwort ist falsch.");
+        }
+
+        if (!dto.getNewPassword().equals(dto.getConfirmNewPassword())) {
+            throw new IllegalArgumentException("Die neuen Passwörter stimmen nicht überein.");
+        }
+
+        user.setPassword(passwordEncoder.encode(dto.getNewPassword()));
+        userRepository.save(user);
     }
 
 }

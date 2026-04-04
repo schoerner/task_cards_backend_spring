@@ -2,6 +2,7 @@ package de.acosci.tasks.controller.rest;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import de.acosci.tasks.common.config.JwtAuthenticationFilter;
+import de.acosci.tasks.model.dto.ChangePasswordDTO;
 import de.acosci.tasks.model.entity.User;
 import de.acosci.tasks.service.impl.UserServiceImpl;
 import jakarta.persistence.EntityNotFoundException;
@@ -12,7 +13,6 @@ import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.FilterType;
-import org.springframework.context.annotation.ComponentScan.Filter;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.security.config.Customizer;
@@ -25,20 +25,14 @@ import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
-import java.util.List;
-
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.doNothing;
-import static org.mockito.Mockito.when;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
+import static org.mockito.Mockito.*;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @WebMvcTest(
         controllers = UserRestController.class,
-        excludeFilters = @Filter(
+        excludeFilters = @org.springframework.context.annotation.ComponentScan.Filter(
                 type = FilterType.ASSIGNABLE_TYPE,
                 classes = JwtAuthenticationFilter.class
         )
@@ -91,21 +85,13 @@ class UserRestControllerTest {
     }
 
     @Test
-    @DisplayName("GET /api/v1/users ist für ADMIN erlaubt")
+    @DisplayName("GET /api/v1/users/{id} ist für ADMIN erlaubt")
     @WithMockUser(roles = "ADMIN")
-    void getAllUsers_asAdmin_returnsOk() throws Exception {
-        when(userService.getUsers()).thenReturn(List.of(new User(), new User()));
+    void getUserById_asAdmin_returnsOk() throws Exception {
+        when(userService.getUserByID(1L)).thenReturn(new User());
 
-        mockMvc.perform(get("/api/v1/users"))
+        mockMvc.perform(get("/api/v1/users/1"))
                 .andExpect(status().isOk());
-    }
-
-    @Test
-    @DisplayName("GET /api/v1/users ist für normalen USER verboten")
-    @WithMockUser(roles = "USER")
-    void getAllUsers_asUser_returnsForbidden() throws Exception {
-        mockMvc.perform(get("/api/v1/users"))
-                .andExpect(status().isForbidden());
     }
 
     @Test
@@ -140,40 +126,24 @@ class UserRestControllerTest {
     }
 
     @Test
-    @DisplayName("POST /api/v1/users ist für ADMIN erlaubt")
+    @DisplayName("GET /api/v1/users/{id} ist anonym nicht erlaubt")
+    void getUserById_anonymous_returnsUnauthorized() throws Exception {
+        mockMvc.perform(get("/api/v1/users/1"))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    @DisplayName("PUT /api/v1/users/{id} ist für ADMIN erlaubt")
     @WithMockUser(roles = "ADMIN")
-    void createUser_asAdmin_returnsCreated() throws Exception {
+    void updateUserById_asAdmin_returnsOk() throws Exception {
         User input = new User();
         User saved = new User();
         when(userService.saveUser(any(User.class))).thenReturn(saved);
 
-        mockMvc.perform(post("/api/v1/users")
+        mockMvc.perform(put("/api/v1/users/1")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(input)))
-                .andExpect(status().isCreated());
-    }
-
-    @Test
-    @DisplayName("POST /api/v1/users ist für normalen USER verboten")
-    @WithMockUser(roles = "USER")
-    void createUser_asUser_returnsForbidden() throws Exception {
-        User input = new User();
-
-        mockMvc.perform(post("/api/v1/users")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(input)))
-                .andExpect(status().isForbidden());
-    }
-
-    @Test
-    @DisplayName("POST /api/v1/users ist anonym nicht erlaubt")
-    void createUser_anonymous_returnsUnauthorized() throws Exception {
-        User input = new User();
-
-        mockMvc.perform(post("/api/v1/users")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(input)))
-                .andExpect(status().isUnauthorized());
+                .andExpect(status().isOk());
     }
 
     @Test
@@ -202,6 +172,30 @@ class UserRestControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(input)))
                 .andExpect(status().isForbidden());
+    }
+
+    @Test
+    @DisplayName("PUT /api/v1/users/{id} liefert 404, wenn der User nicht existiert")
+    @WithMockUser(roles = "ADMIN")
+    void updateUserById_notFound_returnsNotFound() throws Exception {
+        User input = new User();
+        when(userService.saveUser(any(User.class))).thenThrow(new EntityNotFoundException());
+
+        mockMvc.perform(put("/api/v1/users/999")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(input)))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    @DisplayName("PUT /api/v1/users/{id} ist anonym nicht erlaubt")
+    void updateUserById_anonymous_returnsUnauthorized() throws Exception {
+        User input = new User();
+
+        mockMvc.perform(put("/api/v1/users/1")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(input)))
+                .andExpect(status().isUnauthorized());
     }
 
     @Test
@@ -234,4 +228,114 @@ class UserRestControllerTest {
         mockMvc.perform(delete("/api/v1/users/1"))
                 .andExpect(status().isOk());
     }
+
+    @Test
+    @DisplayName("DELETE /api/v1/users/{id} ist anonym nicht erlaubt")
+    void deleteUserById_anonymous_returnsUnauthorized() throws Exception {
+        mockMvc.perform(delete("/api/v1/users/1"))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    @DisplayName("PATCH /api/v1/users/{id}/password ist für den eigenen User erlaubt")
+    @WithMockUser(roles = "USER")
+    void changePassword_asSelf_returnsOk() throws Exception {
+        userSecurity.allowSelf = true;
+        ChangePasswordDTO input = new ChangePasswordDTO();
+        input.setCurrentPassword("oldSecret");
+        input.setNewPassword("newSecret123");
+        input.setConfirmNewPassword("newSecret123");
+
+        doNothing().when(userService).changePassword(any(Long.class), any(ChangePasswordDTO.class));
+
+        mockMvc.perform(patch("/api/v1/users/1/password")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(input)))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    @DisplayName("PATCH /api/v1/users/{id}/password ist für ADMIN erlaubt")
+    @WithMockUser(roles = "ADMIN")
+    void changePassword_asAdmin_returnsOk() throws Exception {
+        ChangePasswordDTO input = new ChangePasswordDTO();
+        input.setCurrentPassword("oldSecret");
+        input.setNewPassword("newSecret123");
+        input.setConfirmNewPassword("newSecret123");
+
+        doNothing().when(userService).changePassword(any(Long.class), any(ChangePasswordDTO.class));
+
+        mockMvc.perform(patch("/api/v1/users/1/password")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(input)))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    @DisplayName("PATCH /api/v1/users/{id}/password ist für fremden USER verboten")
+    @WithMockUser(roles = "USER")
+    void changePassword_asOtherUser_returnsForbidden() throws Exception {
+        userSecurity.allowSelf = false;
+        ChangePasswordDTO input = new ChangePasswordDTO();
+        input.setCurrentPassword("oldSecret");
+        input.setNewPassword("newSecret123");
+        input.setConfirmNewPassword("newSecret123");
+
+        mockMvc.perform(patch("/api/v1/users/2/password")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(input)))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    @DisplayName("PATCH /api/v1/users/{id}/password ist anonym nicht erlaubt")
+    void changePassword_anonymous_returnsUnauthorized() throws Exception {
+        ChangePasswordDTO input = new ChangePasswordDTO();
+        input.setCurrentPassword("oldSecret");
+        input.setNewPassword("newSecret123");
+        input.setConfirmNewPassword("newSecret123");
+
+        mockMvc.perform(patch("/api/v1/users/1/password")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(input)))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    @DisplayName("PATCH /api/v1/users/{id}/password liefert 400 bei ungültigen Passwortdaten")
+    @WithMockUser(roles = "USER")
+    void changePassword_invalidData_returnsBadRequest() throws Exception {
+        userSecurity.allowSelf = true;
+        ChangePasswordDTO input = new ChangePasswordDTO();
+        input.setCurrentPassword("wrongOldSecret");
+        input.setNewPassword("newSecret123");
+        input.setConfirmNewPassword("differentSecret123");
+
+        doThrow(new IllegalArgumentException("Die neuen Passwörter stimmen nicht überein."))
+                .when(userService).changePassword(any(Long.class), any(ChangePasswordDTO.class));
+
+        mockMvc.perform(patch("/api/v1/users/1/password")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(input)))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    @DisplayName("PATCH /api/v1/users/{id}/password liefert 404, wenn der User nicht existiert")
+    @WithMockUser(roles = "ADMIN")
+    void changePassword_notFound_returnsNotFound() throws Exception {
+        ChangePasswordDTO input = new ChangePasswordDTO();
+        input.setCurrentPassword("oldSecret");
+        input.setNewPassword("newSecret123");
+        input.setConfirmNewPassword("newSecret123");
+
+        doThrow(new EntityNotFoundException())
+                .when(userService).changePassword(any(Long.class), any(ChangePasswordDTO.class));
+
+        mockMvc.perform(patch("/api/v1/users/999/password")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(input)))
+                .andExpect(status().isNotFound());
+    }
+
 }

@@ -22,7 +22,6 @@ import java.util.Map;
 @RestController
 @RequestMapping("/api/v1/tasks")
 @RequiredArgsConstructor
-@CrossOrigin(origins = {"http://localhost", "http://localhost:5173/", "http://localhost:3000/"})
 @Tag(name = "Tasks", description = "REST-API zur Verwaltung von Tasks")
 public class TaskRestController {
 

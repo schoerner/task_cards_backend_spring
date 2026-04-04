@@ -20,7 +20,6 @@ import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("api/v1/auth")
-@CrossOrigin(origins = {"http://localhost", "http://localhost:5173/", "http://localhost:3000/"})
 @Tag(name = "Authentication", description = "REST-API für Registrierung und Anmeldung")
 public class AuthenticationRestController {
     private final JwtService jwtService;
