@@ -12,63 +12,46 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 /**
- * TODO UserDetails sollten niemals per Request oder Response verwendet werden => DTOs verwenden
+ * Authenticated application user.
  */
 @Entity
 @Table(name = "users")
-// todo Info @Data Problem with Circular References
-// <=> ManyToMany && JPA => StackOverflowError -> https://stackoverflow.com/questions/62585553/java-spring-boot-jpa-stackoverflowerror-with-a-manytomany-relation
-// => Implement/generate toString, hashCode and equals
 @Getter
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
 public class User implements UserDetails {
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(unique = true)
+    @Column(unique = true, nullable = false, length = 255)
     private String email;
 
     @CreationTimestamp
+    @Temporal(TemporalType.TIMESTAMP)
     private Date registration;
 
     @JsonIgnore
+    @Column(nullable = false)
     private String password;
 
     @JsonIgnore
     @Transient
-    private String password_verification;
+    private String passwordVerification;
 
-    @Column(name = "first_name", nullable = false, length = 20)
+    @Column(name = "first_name", nullable = false, length = 50)
     private String firstName;
 
     @Column(name = "last_name", nullable = false, length = 50)
     private String lastName;
 
-    // Strategie 2 von: https://www.baeldung.com/jpa-one-to-one
-    @OneToOne(mappedBy = "user", cascade = CascadeType.ALL)//, orphanRemoval = true)
-    //@JoinColumn(name = "user_profile_id")// optional, da automatisch generiert: , referencedColumnName = "id")
-    @PrimaryKeyJoinColumn
+    @JsonIgnore
+    @OneToOne(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     private UserProfile profile;
 
     @JsonIgnore
-    @OneToMany(mappedBy = "creator")
-    private List<Task> tasks = new ArrayList<>();
-
-    @JsonIgnore
-    @ManyToMany(mappedBy = "assignees")
-    private Set<Task> assignedTasks = new HashSet<>();
-
-    @JsonIgnore
-    @OneToMany(mappedBy = "creator")
-    private Set<Task> createdProjects = new HashSet<>();
-
-    @JsonIgnore
-    @ManyToMany(mappedBy = "members") // User is not the owner of the relation
-    private Set<Project> projects = new HashSet<>();
-
     @ManyToMany(fetch = FetchType.EAGER)
     @JoinTable(
             name = "user_roles",
@@ -78,11 +61,40 @@ public class User implements UserDetails {
     private Set<Role> roles = new HashSet<>();
 
     @JsonIgnore
+    @OneToMany(mappedBy = "creator")
+    private Set<Project> createdProjects = new HashSet<>();
+
+    @JsonIgnore
+    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
+    private Set<ProjectMember> projectMemberships = new HashSet<>();
+
+    @JsonIgnore
+    @OneToMany(mappedBy = "creator")
+    private Set<Task> createdTasks = new HashSet<>();
+
+    @JsonIgnore
+    @ManyToMany(mappedBy = "assignees")
+    private Set<Task> assignedTasks = new HashSet<>();
+
+    @JsonIgnore
+    @OneToMany(mappedBy = "author")
+    private Set<TaskComment> comments = new HashSet<>();
+
+    @JsonIgnore
+    @OneToMany(mappedBy = "createdBy")
+    private Set<TaskActivity> taskActivities = new HashSet<>();
+
     @Override
+    @JsonIgnore
     public Collection<? extends GrantedAuthority> getAuthorities() {
         return roles.stream()
                 .map(role -> new SimpleGrantedAuthority(role.getName().name()))
-                .collect(Collectors.toList());
+                .collect(Collectors.toSet());
+    }
+
+    @Override
+    public String getUsername() {
+        return email;
     }
 
     @Override
@@ -110,32 +122,15 @@ public class User implements UserDetails {
     }
 
     @Override
-    public String getUsername() {
-        return email;
-    }
-
-    /* https://www.youtube.com/watch?v=CvDS6DltIno */
-
-    @Override
     public boolean equals(Object o) {
+        if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         User user = (User) o;
-        return Objects.equals(id, user.id) && Objects.equals(email, user.email) && Objects.equals(registration, user.registration) && Objects.equals(firstName, user.firstName) && Objects.equals(lastName, user.lastName);
+        return id != null && Objects.equals(id, user.id);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(id, email, registration, firstName, lastName);
-    }
-
-    @Override
-    public String toString() {
-        return "User{" +
-                "id=" + id +
-                ", email='" + email + '\'' +
-                ", registration=" + registration +
-                ", firstName='" + firstName + '\'' +
-                ", lastName='" + lastName + '\'' +
-                '}';
+        return Objects.hashCode(id);
     }
 }

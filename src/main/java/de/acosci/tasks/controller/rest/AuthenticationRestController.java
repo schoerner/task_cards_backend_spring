@@ -3,7 +3,9 @@ package de.acosci.tasks.controller.rest;
 import de.acosci.tasks.model.dto.LoginResponseDTO;
 import de.acosci.tasks.model.dto.LoginUserDTO;
 import de.acosci.tasks.model.dto.RegisterUserDTO;
+import de.acosci.tasks.model.dto.UserResponseDTO;
 import de.acosci.tasks.model.entity.User;
+import de.acosci.tasks.model.mapper.UserMapper;
 import de.acosci.tasks.service.impl.AuthenticationService;
 import de.acosci.tasks.service.impl.JwtService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -38,13 +40,13 @@ public class AuthenticationRestController {
             @ApiResponse(
                     responseCode = "200",
                     description = "Benutzer erfolgreich registriert",
-                    content = @Content(schema = @Schema(implementation = User.class))
+                    content = @Content(schema = @Schema(implementation = UserResponseDTO.class))
             ),
             @ApiResponse(responseCode = "404", description = "Registrierung fehlgeschlagen", content = @Content),
             @ApiResponse(responseCode = "409", description = "Benutzer existiert bereits oder Konflikt bei der Registrierung", content = @Content)
     })
     @PostMapping("/signup")
-    public ResponseEntity<User> register(
+    public ResponseEntity<UserResponseDTO> register(
             @io.swagger.v3.oas.annotations.parameters.RequestBody(
                     description = "Registrierungsdaten des Benutzers",
                     required = true,
@@ -53,7 +55,7 @@ public class AuthenticationRestController {
             @RequestBody RegisterUserDTO registerUserDto) {
         try {
             User registeredUser = authenticationService.signup(registerUserDto);
-            return ResponseEntity.ok(registeredUser);
+            return ResponseEntity.ok(UserMapper.toUserResponseDTO(registeredUser));
         } catch (RuntimeException e) {
             return ResponseEntity.notFound().build();
         } catch (Exception e) {

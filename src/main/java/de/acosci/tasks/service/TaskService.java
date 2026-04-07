@@ -1,31 +1,28 @@
 package de.acosci.tasks.service;
 
-import de.acosci.tasks.model.entity.Task;
-import de.acosci.tasks.model.entity.TimeRecord;
-import org.springframework.security.access.prepost.PreAuthorize;
+import de.acosci.tasks.model.dto.TaskCreateDTO;
+import de.acosci.tasks.model.dto.TaskResponseDTO;
+import de.acosci.tasks.model.dto.TaskUpdateDTO;
+import de.acosci.tasks.model.dto.TimeRecordResponseDTO;
 
 import java.util.List;
-import java.util.Map;
 
-/*
-
+/**
+ * Service for task lifecycle and kanban operations.
  */
 public interface TaskService {
-    List<Task> getAllTasks();
-    List<Task> getMyTasks();
-    List<Task> getMyOwnedTasks();
-    List<Task> getActiveTasks();
-    Task saveTask(Task task) throws Exception;
-    Task getTaskByID(Long id);
-    Task updateTask(Task task);
-    Task patchTask(Long id, Map<String, Object> updates);
-    void deleteTaskByID(Long id);
-    void deleteTask(Task task);
-    TimeRecord getActiveTimeRecord(Long taskID);
-    TimeRecord getActiveTimeRecord(Task task);
-    Boolean isActive(Long taskID);
-    Boolean isActive(Task task);
-    Task startTask(Long taskId);
-    Task stopTask(Long taskId);
+    List<TaskResponseDTO> getTasksByProject(Long projectId);
+    TaskResponseDTO getTaskById(Long taskId);
+    TaskResponseDTO createTask(TaskCreateDTO dto);
+    TaskResponseDTO updateTask(Long taskId, TaskUpdateDTO dto);
+    TaskResponseDTO moveTask(Long taskId, Long boardColumnId);
+    TaskResponseDTO archiveTask(Long taskId);
+    TaskResponseDTO restoreTask(Long taskId);
+    void deleteTask(Long taskId);
 
+    List<TimeRecordResponseDTO> getTimeRecords(Long taskId);
+    TimeRecordResponseDTO getActiveTimeRecord(Long taskId);
+    boolean isActive(Long taskId);
+    TaskResponseDTO startTimeTracking(Long taskId);
+    TaskResponseDTO stopTimeTracking(Long taskId);
 }

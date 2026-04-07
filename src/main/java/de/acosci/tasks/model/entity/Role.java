@@ -3,6 +3,9 @@ package de.acosci.tasks.model.entity;
 import jakarta.persistence.*;
 import lombok.*;
 
+/**
+ * Global application role assigned to a user.
+ */
 @Entity
 @Table(name = "roles")
 @Getter
@@ -10,9 +13,9 @@ import lombok.*;
 @NoArgsConstructor
 @AllArgsConstructor
 public class Role {
+
     public enum RoleName {
         ROLE_USER,
-        ROLE_MODERATOR,
         ROLE_ADMIN
     }
 

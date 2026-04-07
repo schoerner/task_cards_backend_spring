@@ -1,67 +1,148 @@
 package de.acosci.tasks.model.entity;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import de.acosci.tasks.model.enums.TaskPriority;
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NoArgsConstructor;
-import org.hibernate.annotations.OnDelete;
-import org.hibernate.annotations.OnDeleteAction;
+import lombok.*;
+import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.UpdateTimestamp;
 
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
+import java.time.OffsetDateTime;
+import java.util.LinkedHashSet;
+import java.util.Objects;
 import java.util.Set;
 
+/**
+ * Work item on the kanban board of a project.
+ */
+@Entity
+@Table(name = "tasks")
+@Getter
+@Setter
 @NoArgsConstructor
 @AllArgsConstructor
-@Data // @Data: Combines @Getter, @Setter, @ToString, @EqualsAndHashCode, and @RequiredArgsConstructor
-@Entity // JPA-Entity
-@Table(name="tasks")
 public class Task {
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @Column(nullable = false, length = 255)
     private String title;
-    private String description;
-    private Double processInPercentage;
-    private Boolean completed;
 
-    @ManyToOne
-    @JoinColumn(name = "creator_user_id")
+    @Column(columnDefinition = "MEDIUMTEXT")
+    private String description;
+
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "project_id", nullable = false)
+    private Project project;
+
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "board_column_id", nullable = false)
+    private BoardColumn boardColumn;
+
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "creator_user_id", nullable = false)
     private User creator;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 20)
+    private TaskPriority priority = TaskPriority.MEDIUM;
+
+    private OffsetDateTime dueDate;
+
+    @Column(nullable = false)
+    private boolean archived = false;
+
+    @Column(nullable = false)
+    private Integer estimatedMinutes = 0;
+
+    /**
+     * Cached total of completed time records in minutes.
+     * This value is recalculated whenever active tracking is stopped.
+     */
+    @Column(nullable = false)
+    private Integer trackedMinutes = 0;
+
+    @CreationTimestamp
+    @Column(nullable = false, updatable = false)
+    private OffsetDateTime createdAt;
+
+    @UpdateTimestamp
+    @Column(nullable = false)
+    private OffsetDateTime updatedAt;
 
     @ManyToMany
     @JoinTable(
             name = "task_assignees",
-            joinColumns = @JoinColumn(name = "project_id"),
+            joinColumns = @JoinColumn(name = "task_id"),
             inverseJoinColumns = @JoinColumn(name = "user_id")
     )
-    private Set<User> assignees = new HashSet<>();
+    private Set<User> assignees = new LinkedHashSet<>();
 
-    // Wichtig: @JsonIgnore darf hier nicht stehen, wenn Projekt-ID mitgegeben werden soll
-    @ManyToOne
-    @JoinColumn(name = "project_id")
-    @OnDelete(action = OnDeleteAction.CASCADE) // https://stackoverflow.com/questions/7197181/jpa-unidirectional-many-to-one-and-cascading-delete
-    private Project project;
+    @ManyToMany
+    @JoinTable(
+            name = "task_labels_map",
+            joinColumns = @JoinColumn(name = "task_id"),
+            inverseJoinColumns = @JoinColumn(name = "label_id")
+    )
+    private Set<TaskLabel> labels = new LinkedHashSet<>();
 
+    @JsonIgnore
     @OneToMany(mappedBy = "task", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<TimeRecord> timeRecords = new ArrayList<>();
+    private Set<TaskComment> comments = new LinkedHashSet<>();
 
-    // todo abhängig von Uses Cases @Transient
-    // MVP Minimal viable Product
+    @JsonIgnore
+    @OneToMany(mappedBy = "task", cascade = CascadeType.ALL, orphanRemoval = true)
+    private Set<TaskSubTask> subTasks = new LinkedHashSet<>();
+
+    @JsonIgnore
+    @OneToMany(mappedBy = "task", cascade = CascadeType.ALL, orphanRemoval = true)
+    private Set<TaskAttachment> attachments = new LinkedHashSet<>();
+
+    @JsonIgnore
+    @OneToMany(mappedBy = "task", cascade = CascadeType.ALL, orphanRemoval = true)
+    private Set<TaskActivity> activities = new LinkedHashSet<>();
+
+    @JsonIgnore
+    @OneToMany(mappedBy = "task", cascade = CascadeType.ALL, orphanRemoval = true)
+    private Set<TaskRecurrenceRule> recurrenceRules = new LinkedHashSet<>();
+
+    @JsonIgnore
+    @OneToMany(mappedBy = "blockedTask", cascade = CascadeType.ALL, orphanRemoval = true)
+    private Set<TaskDependency> predecessors = new LinkedHashSet<>();
+
+    @JsonIgnore
+    @OneToMany(mappedBy = "blockingTask", cascade = CascadeType.ALL, orphanRemoval = true)
+    private Set<TaskDependency> successors = new LinkedHashSet<>();
+
+    /**
+     * Recorded working intervals for active/manual time tracking.
+     */
+    @JsonIgnore
+    @OneToMany(mappedBy = "task", cascade = CascadeType.ALL, orphanRemoval = true)
+    private Set<TimeRecord> timeRecords = new LinkedHashSet<>();
+
+    /**
+     * Convenience flag for the frontend. A task is active when one open
+     * time record without end timestamp exists.
+     */
     @Transient
-    private boolean active;
+    public boolean isActive() {
+        return timeRecords != null
+                && timeRecords.stream().anyMatch(timeRecord -> timeRecord.getTimeEnd() == null);
+    }
 
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        Task task = (Task) o;
+        return id != null && Objects.equals(id, task.id);
+    }
 
-    // Reflexive relation
-    @JsonIgnore
-    @ManyToOne
-    @JoinColumn(name = "predecessor_id", nullable = true)
-    private Task predecessor;
-
-    @JsonIgnore
-    @OneToMany(mappedBy = "predecessor")
-    private List<Task> successors = new ArrayList<>();
+    @Override
+    public int hashCode() {
+        return Objects.hashCode(id);
+    }
 }

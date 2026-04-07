@@ -1,340 +1,244 @@
 package de.acosci.tasks.service.impl;
 
-import de.acosci.tasks.model.entity.Role.RoleName;
+import de.acosci.tasks.model.dto.TaskCreateDTO;
+import de.acosci.tasks.model.dto.TaskResponseDTO;
+import de.acosci.tasks.model.dto.TaskUpdateDTO;
+import de.acosci.tasks.model.dto.TimeRecordResponseDTO;
+import de.acosci.tasks.model.entity.BoardColumn;
+import de.acosci.tasks.model.entity.Project;
 import de.acosci.tasks.model.entity.Task;
+import de.acosci.tasks.model.entity.TaskLabel;
 import de.acosci.tasks.model.entity.TimeRecord;
 import de.acosci.tasks.model.entity.User;
+import de.acosci.tasks.model.mapper.TaskMapper;
+import de.acosci.tasks.repository.BoardColumnRepository;
+import de.acosci.tasks.repository.ProjectRepository;
+import de.acosci.tasks.repository.TaskLabelRepository;
 import de.acosci.tasks.repository.TaskRepository;
 import de.acosci.tasks.repository.TimeRecordRepository;
 import de.acosci.tasks.repository.UserRepository;
 import de.acosci.tasks.service.TaskService;
-import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
-import org.springframework.security.access.AccessDeniedException;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
-import java.util.*;
-import java.util.stream.Collectors;
+import java.util.Date;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Set;
+import java.util.concurrent.TimeUnit;
 
 @Service
 @RequiredArgsConstructor
+@Transactional
 public class TaskServiceImpl implements TaskService {
 
     private final TaskRepository taskRepository;
+    private final ProjectRepository projectRepository;
+    private final BoardColumnRepository boardColumnRepository;
     private final UserRepository userRepository;
+    private final TaskLabelRepository taskLabelRepository;
     private final TimeRecordRepository timeRecordRepository;
 
-    // 🔹 Hilfsmethoden ------------------------------------------------------
+    @Override
+    @Transactional(readOnly = true)
+    public List<TaskResponseDTO> getTasksByProject(Long projectId) {
+        List<Task> tasks = taskRepository.findAllByProject_IdAndArchivedFalse(projectId);
+        tasks.forEach(this::synchronizeTrackedMinutesFromRecords);
+        return tasks.stream()
+                .map(TaskMapper::toResponseDTO)
+                .toList();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public TaskResponseDTO getTaskById(Long taskId) {
+        Task task = requireTask(taskId);
+        synchronizeTrackedMinutesFromRecords(task);
+        return TaskMapper.toResponseDTO(task);
+    }
+
+    @Override
+    public TaskResponseDTO createTask(TaskCreateDTO dto) {
+        Project project = projectRepository.findById(dto.getProjectId())
+                .orElseThrow(() -> new IllegalArgumentException("Project not found: " + dto.getProjectId()));
+
+        BoardColumn boardColumn = resolveBoardColumn(dto.getProjectId(), dto.getBoardColumnId());
+        User currentUser = getCurrentUser();
+
+        Task task = new Task();
+        task.setProject(project);
+        task.setBoardColumn(boardColumn);
+        task.setCreator(currentUser);
+        task.setTitle(dto.getTitle());
+        task.setDescription(dto.getDescription());
+        task.setPriority(dto.getPriority());
+        task.setDueDate(dto.getDueDate());
+        task.setEstimatedMinutes(dto.getEstimatedMinutes() != null ? dto.getEstimatedMinutes() : 0);
+        task.setTrackedMinutes(0);
+        task.setAssignees(resolveUsers(dto.getAssigneeIds()));
+        task.setLabels(resolveLabels(dto.getLabelIds()));
+        return TaskMapper.toResponseDTO(taskRepository.save(task));
+    }
+
+    @Override
+    public TaskResponseDTO updateTask(Long taskId, TaskUpdateDTO dto) {
+        Task task = requireTask(taskId);
+        task.setTitle(dto.getTitle());
+        task.setDescription(dto.getDescription());
+
+        if (dto.getBoardColumnId() != null) {
+            task.setBoardColumn(resolveBoardColumn(task.getProject().getId(), dto.getBoardColumnId()));
+        }
+        if (dto.getPriority() != null) {
+            task.setPriority(dto.getPriority());
+        }
+
+        task.setDueDate(dto.getDueDate());
+
+        if (dto.getEstimatedMinutes() != null) {
+            task.setEstimatedMinutes(dto.getEstimatedMinutes());
+        }
+
+        /*
+         * trackedMinutes remains a derived/cache field from time_records.
+         * Do not overwrite it blindly through the generic update endpoint.
+         */
+        synchronizeTrackedMinutesFromRecords(task);
+
+        task.setArchived(dto.isArchived());
+        task.setAssignees(resolveUsers(dto.getAssigneeIds()));
+        task.setLabels(resolveLabels(dto.getLabelIds()));
+        return TaskMapper.toResponseDTO(taskRepository.save(task));
+    }
+
+    @Override
+    public TaskResponseDTO moveTask(Long taskId, Long boardColumnId) {
+        Task task = requireTask(taskId);
+        task.setBoardColumn(resolveBoardColumn(task.getProject().getId(), boardColumnId));
+        return TaskMapper.toResponseDTO(taskRepository.save(task));
+    }
+
+    @Override
+    public TaskResponseDTO archiveTask(Long taskId) {
+        Task task = requireTask(taskId);
+        task.setArchived(true);
+        return TaskMapper.toResponseDTO(taskRepository.save(task));
+    }
+
+    @Override
+    public TaskResponseDTO restoreTask(Long taskId) {
+        Task task = requireTask(taskId);
+        task.setArchived(false);
+        return TaskMapper.toResponseDTO(taskRepository.save(task));
+    }
+
+    @Override
+    public void deleteTask(Long taskId) {
+        taskRepository.deleteById(taskId);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<TimeRecordResponseDTO> getTimeRecords(Long taskId) {
+        requireTask(taskId);
+        return timeRecordRepository.findAllByTask_IdOrderByTimeStartDesc(taskId).stream()
+                .map(TaskMapper::toResponseDTO)
+                .toList();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public TimeRecordResponseDTO getActiveTimeRecord(Long taskId) {
+        requireTask(taskId);
+        return timeRecordRepository.findFirstByTask_IdAndTimeEndIsNullOrderByTimeStartDesc(taskId)
+                .map(TaskMapper::toResponseDTO)
+                .orElse(null);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public boolean isActive(Long taskId) {
+        return getActiveTimeRecord(taskId) != null;
+    }
+
+    @Override
+    public TaskResponseDTO startTimeTracking(Long taskId) {
+        Task task = requireTask(taskId);
+
+        if (isActive(taskId)) {
+            throw new IllegalStateException("Task already has an active time record: " + taskId);
+        }
+
+        TimeRecord newTimeRecord = new TimeRecord(task);
+        timeRecordRepository.save(newTimeRecord);
+        task.getTimeRecords().add(newTimeRecord);
+
+        synchronizeTrackedMinutesFromRecords(task);
+        return TaskMapper.toResponseDTO(taskRepository.save(task));
+    }
+
+    @Override
+    public TaskResponseDTO stopTimeTracking(Long taskId) {
+        Task task = requireTask(taskId);
+
+        TimeRecord activeTimeRecord = timeRecordRepository
+                .findFirstByTask_IdAndTimeEndIsNullOrderByTimeStartDesc(taskId)
+                .orElseThrow(() -> new IllegalStateException("No active time record found for task " + taskId));
+
+        activeTimeRecord.setTimeEnd(new Date());
+        timeRecordRepository.save(activeTimeRecord);
+
+        synchronizeTrackedMinutesFromRecords(task);
+        return TaskMapper.toResponseDTO(taskRepository.save(task));
+    }
+
+    private Task requireTask(Long taskId) {
+        return taskRepository.findById(taskId)
+                .orElseThrow(() -> new IllegalArgumentException("Task not found: " + taskId));
+    }
+
+    private BoardColumn resolveBoardColumn(Long projectId, Long boardColumnId) {
+        if (boardColumnId != null) {
+            return boardColumnRepository.findById(boardColumnId)
+                    .filter(column -> column.getProject().getId().equals(projectId))
+                    .orElseThrow(() -> new IllegalArgumentException("Board column not found: " + boardColumnId));
+        }
+        return boardColumnRepository.findByProject_IdAndName(projectId, "Not assigned")
+                .orElseThrow(() -> new IllegalStateException("Mandatory default column 'Not assigned' is missing."));
+    }
+
+    private Set<User> resolveUsers(Set<Long> userIds) {
+        if (userIds == null || userIds.isEmpty()) {
+            return new LinkedHashSet<>();
+        }
+        return new LinkedHashSet<>(userRepository.findAllById(userIds));
+    }
+
+    private Set<TaskLabel> resolveLabels(Set<Long> labelIds) {
+        if (labelIds == null || labelIds.isEmpty()) {
+            return new LinkedHashSet<>();
+        }
+        return new LinkedHashSet<>(taskLabelRepository.findAllById(labelIds));
+    }
+
+    private void synchronizeTrackedMinutesFromRecords(Task task) {
+        int trackedMinutes = task.getTimeRecords().stream()
+                .filter(timeRecord -> timeRecord.getTimeStart() != null && timeRecord.getTimeEnd() != null)
+                .mapToInt(timeRecord -> {
+                    long diffInMillis = timeRecord.getTimeEnd().getTime() - timeRecord.getTimeStart().getTime();
+                    return (int) TimeUnit.MILLISECONDS.toMinutes(Math.max(diffInMillis, 0L));
+                })
+                .sum();
+        task.setTrackedMinutes(trackedMinutes);
+    }
 
     private User getCurrentUser() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        String username = authentication.getName();
-        return userRepository.findByEmail(username)
-                .orElseThrow(() -> new EntityNotFoundException("User not found: " + username));
-    }
-
-    private boolean isAdmin(User user) {
-        return user.getRoles().stream().anyMatch(r -> r.getName() == RoleName.ROLE_ADMIN);
-    }
-
-    private boolean isModerator(User user) {
-        return user.getRoles().stream().anyMatch(r -> r.getName() == RoleName.ROLE_MODERATOR);
-    }
-
-    private boolean isOwner(Task task, User user) {
-        return task.getCreator() != null && task.getCreator().getId().equals(user.getId());
-    }
-
-    private boolean isAssignee(Task task, User user) {
-        return task.getAssignees().stream().anyMatch(u -> u.getId().equals(user.getId()));
-    }
-
-    private void ensureCanView(Task task, User user) {
-        if (isAdmin(user)) return;
-        if (isOwner(task, user)) return;
-        if (isAssignee(task, user)) return;
-        throw new AccessDeniedException("User cannot view this task");
-    }
-
-    private void ensureCanModify(Task task, User user) {
-        if (isAdmin(user)) return;
-        if (isOwner(task, user) && isModerator(user)) return;
-        throw new AccessDeniedException("User cannot modify this task");
-    }
-
-    private List<Task> determineActiveTasks(List<Task> tasks) {
-        tasks.forEach(task -> {
-            boolean active = task.getTimeRecords().stream()
-                    .anyMatch(timeRecord -> timeRecord.getTimeEnd() == null);
-            task.setActive(active);
-        });
-        return tasks;
-    }
-
-    // 🔹 Service-Methoden ------------------------------------------------------
-
-    @Override
-    @PreAuthorize("isAuthenticated()")
-    public List<Task> getAllTasks() {
-        User currentUser = getCurrentUser();
-        if (isAdmin(currentUser)) {
-            return determineActiveTasks(taskRepository.findAll());
-        }
-        return determineActiveTasks(
-                taskRepository.findAll().stream()
-                        .filter(task -> isOwner(task, currentUser) || isAssignee(task, currentUser))
-                        .collect(Collectors.toList())
-        );
-    }
-
-    @Override
-    @PreAuthorize("isAuthenticated()")
-    public List<Task> getMyTasks() {
-        User currentUser = getCurrentUser();
-        return determineActiveTasks(
-                taskRepository.findAll().stream()
-                        .filter(task -> isOwner(task, currentUser) || isAssignee(task, currentUser))
-                        .collect(Collectors.toList())
-        );
-    }
-
-    @Override
-    @PreAuthorize("hasAnyRole('MODERATOR','ADMIN')")
-    public List<Task> getMyOwnedTasks() {
-        User currentUser = getCurrentUser();
-        return determineActiveTasks(taskRepository.findByCreator_Id(currentUser.getId()));
-    }
-
-    @Override
-    @PreAuthorize("isAuthenticated()")
-    public Task getTaskByID(Long id) {
-        User currentUser = getCurrentUser();
-        Task task = taskRepository.findById(id)
-                .orElseThrow(() -> new EntityNotFoundException("Task not found with id " + id));
-        ensureCanView(task, currentUser);
-        return task;
-    }
-
-    @Override
-    @PreAuthorize("hasAnyRole('MODERATOR','ADMIN')")
-    public Task saveTask(Task task) {
-        User currentUser = getCurrentUser();
-        task.setCreator(currentUser);
-        return taskRepository.save(task);
-    }
-
-    @PreAuthorize("hasAnyRole('MODERATOR','ADMIN')")
-    @Override
-    public Task updateTask(Task task) {
-        User currentUser = getCurrentUser();
-        Task existing = taskRepository.findById(task.getId())
-                .orElseThrow(() -> new EntityNotFoundException("Task not found with id " + task.getId()));
-        ensureCanModify(existing, currentUser);
-
-        existing.setTitle(task.getTitle());
-        existing.setDescription(task.getDescription());
-        existing.setProcessInPercentage(task.getProcessInPercentage());
-        existing.setCompleted(task.getCompleted());
-        existing.setAssignees(task.getAssignees());
-        existing.setProject(task.getProject());
-
-        return taskRepository.save(existing);
-    }
-
-    @PreAuthorize("hasAnyRole('MODERATOR','ADMIN')")
-    @Override
-    public Task patchTask(Long id, Map<String, Object> updates) {
-        User currentUser = getCurrentUser();
-
-        Task existing = taskRepository.findById(id)
-                .orElseThrow(() -> new EntityNotFoundException("Task not found with id " + id));
-
-        ensureCanModify(existing, currentUser);
-
-        if (updates == null || updates.isEmpty()) {
-            throw new IllegalArgumentException("No updates provided");
-        }
-
-        for (Map.Entry<String, Object> entry : updates.entrySet()) {
-            String field = entry.getKey();
-            Object value = entry.getValue();
-
-            switch (field) {
-
-                case "title" -> {
-                    if (value == null) {
-                        existing.setTitle(null);
-                    } else if (value instanceof String s) {
-                        existing.setTitle(s);
-                    } else {
-                        throw new IllegalArgumentException("title must be a string");
-                    }
-                }
-
-                case "description" -> {
-                    if (value == null) {
-                        existing.setDescription(null);
-                    } else if (value instanceof String s) {
-                        existing.setDescription(s);
-                    } else {
-                        throw new IllegalArgumentException("description must be a string");
-                    }
-                }
-
-                case "processInPercentage" -> {
-                    if (value == null) {
-                        existing.setProcessInPercentage(null); // falls Integer/Wrapper; sonst anpassen
-                    } else if (value instanceof Double n) {
-                        double p = n.doubleValue();
-                        if (p < 0 || p > 100) {
-                            throw new IllegalArgumentException("processInPercentage must be between 0 and 100");
-                        }
-                        existing.setProcessInPercentage(p);
-                    } else {
-                        throw new IllegalArgumentException("processInPercentage must be a number");
-                    }
-                }
-
-                case "completed" -> {
-                    if (value == null) {
-                        existing.setCompleted(null); // falls Boolean/Wrapper; sonst anpassen
-                    } else if (value instanceof Boolean b) {
-                        existing.setCompleted(b);
-                    } else {
-                        throw new IllegalArgumentException("completed must be boolean");
-                    }
-                }
-
-                /*
-                 * Optional: assignees als Liste von User-IDs patchen.
-                 * Beispiel-JSON: { "assignees": [3, 7, 9] }
-                 */
-                case "assignees" -> {
-                    if (value == null) {
-                        existing.setAssignees(new HashSet<>());
-                    } else if (value instanceof java.util.List<?> rawList) {
-                        List<Long> ids = new ArrayList<>();
-                        for (Object o : rawList) {
-                            if (o instanceof Number n) {
-                                ids.add(n.longValue());
-                            } else {
-                                throw new IllegalArgumentException("assignees must be an array of numeric user ids");
-                            }
-                        }
-                        Set<User> users = new HashSet<>(userRepository.findAllById(ids));
-                        if (users.size() != ids.size()) {
-                            throw new IllegalArgumentException("assignees contains unknown user ids");
-                        }
-                        existing.setAssignees(users);
-                    } else {
-                        throw new IllegalArgumentException("assignees must be an array");
-                    }
-                }
-
-                // Felder, die NICHT gepatcht werden dürfen
-                case "id", "creator", "timeRecords", "active", "project" -> {
-                    throw new IllegalArgumentException("Field '" + field + "' cannot be patched");
-                }
-
-                // Unbekannte Felder
-                default -> throw new IllegalArgumentException("Unknown field: " + field);
-            }
-        }
-
-        return taskRepository.save(existing);
-    }
-
-    @Override
-    @PreAuthorize("hasAnyRole('MODERATOR','ADMIN')")
-    public void deleteTaskByID(Long id) {
-        User currentUser = getCurrentUser();
-        Task task = taskRepository.findById(id)
-                .orElseThrow(() -> new EntityNotFoundException("Task not found with id " + id));
-        ensureCanModify(task, currentUser);
-        taskRepository.deleteById(id);
-    }
-
-    @Override
-    @PreAuthorize("hasAnyRole('MODERATOR','ADMIN')")
-    public void deleteTask(Task task) {
-        deleteTaskByID(task.getId());
-    }
-
-    @Override
-    @PreAuthorize("isAuthenticated()")
-    public Task startTask(Long taskID) {
-        User currentUser = getCurrentUser();
-        Task task = taskRepository.findById(taskID)
-                .orElseThrow(() -> new EntityNotFoundException("Task not found with id " + taskID));
-        ensureCanView(task, currentUser);
-
-        TimeRecord newTimeRecord = new TimeRecord(task);
-        task.getTimeRecords().add(newTimeRecord);
-
-        timeRecordRepository.save(newTimeRecord);
-        Task startedTask = taskRepository.save(task);
-        startedTask.setActive(true);
-
-        return startedTask;
-    }
-
-    @Override
-    @PreAuthorize("isAuthenticated()")
-    public Task stopTask(Long taskID) {
-        User currentUser = getCurrentUser();
-        Task task = taskRepository.findById(taskID)
-                .orElseThrow(() -> new EntityNotFoundException("Task not found with id " + taskID));
-        ensureCanView(task, currentUser);
-
-        TimeRecord activeTimeRecord = getActiveTimeRecord(task);
-        if (activeTimeRecord == null) {
-            throw new IllegalStateException("No active time record found for task " + taskID);
-        }
-
-        activeTimeRecord.setTimeEnd(new Date());
-        task.setActive(false);
-
-        timeRecordRepository.save(activeTimeRecord);
-        return taskRepository.save(task);
-    }
-
-    // 🔹 Hilfsmethoden für Zeitstatus ------------------------------
-
-    @Override
-    @PreAuthorize("isAuthenticated()")
-    public List<Task> getActiveTasks() {
-        return getAllTasks().stream()
-                .filter(Task::isActive)
-                .collect(Collectors.toList());
-    }
-
-    @Override
-    @PreAuthorize("isAuthenticated()")
-    public TimeRecord getActiveTimeRecord(Long taskID) {
-        Task task = getTaskByID(taskID);
-        return getActiveTimeRecord(task);
-    }
-
-    @Override
-    @PreAuthorize("isAuthenticated()")
-    public TimeRecord getActiveTimeRecord(Task task) {
-        return task.getTimeRecords().stream()
-                .filter(timeRecord -> timeRecord.getTimeEnd() == null)
-                .findFirst().orElse(null);
-    }
-
-    @Override
-    @PreAuthorize("isAuthenticated()")
-    public Boolean isActive(Long taskID) {
-        return getActiveTimeRecord(taskID) != null;
-    }
-
-    @Override
-    @PreAuthorize("isAuthenticated()")
-    public Boolean isActive(Task task) {
-        return getActiveTimeRecord(task) != null;
+        String email = authentication.getName();
+        return userRepository.findByEmail(email)
+                .orElseThrow(() -> new IllegalStateException("Authenticated user not found: " + email));
     }
 }

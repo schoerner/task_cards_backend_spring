@@ -2,17 +2,11 @@ package de.acosci.tasks.repository;
 
 import de.acosci.tasks.model.entity.Task;
 import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.stereotype.Repository;
 
 import java.util.List;
 
-/**
- * @author Gernot Schörner
- * The @Repository annotation is a marker for any class that fulfills the role or stereotype of a repository (also known as Data Access Object or DAO). Among the uses of this marker is the automatic translation of exceptions, as described in Exception Translation.
- * Source: Layers: https://www.tpointtech.com/spring-boot-architecture
- * Source: https://docs.spring.io/spring-framework/reference/core/beans/classpath-scanning.html#beans-stereotype-annotations
- */
-@Repository
 public interface TaskRepository extends JpaRepository<Task, Long> {
-    List<Task> findByCreator_Id(Long creatorId);
+    List<Task> findAllByProject_IdAndArchivedFalse(Long projectId);
+    List<Task> findAllByProject_IdAndBoardColumn_IdAndArchivedFalse(Long projectId, Long boardColumnId);
+    List<Task> findAllByAssignees_IdAndArchivedFalse(Long assigneeUserId);
 }

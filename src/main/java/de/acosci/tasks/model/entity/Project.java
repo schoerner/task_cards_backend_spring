@@ -2,45 +2,74 @@ package de.acosci.tasks.model.entity;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.*;
+import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.UpdateTimestamp;
 
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
+import java.time.OffsetDateTime;
+import java.util.LinkedHashSet;
+import java.util.Objects;
 import java.util.Set;
 
+/**
+ * Collaborative project with its own members, tasks and kanban board columns.
+ */
 @Entity
 @Table(name = "projects")
+@Getter
+@Setter
 @NoArgsConstructor
 @AllArgsConstructor
-@Data
 public class Project {
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+
+    @Column(nullable = false, length = 150)
     private String name;
 
-    @ManyToOne
-    @JoinColumn(name = "creator_user_id")
+    @Column(length = 5000)
+    private String description;
+
+    @Column(nullable = false)
+    private boolean archived = false;
+
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "creator_user_id", nullable = false)
     private User creator;
+
+    @CreationTimestamp
+    @Column(nullable = false, updatable = false)
+    private OffsetDateTime createdAt;
+
+    @UpdateTimestamp
+    @Column(nullable = false)
+    private OffsetDateTime updatedAt;
 
     @JsonIgnore
     @OneToMany(mappedBy = "project", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<Task> tasks = new ArrayList<>();
+    @OrderBy("position ASC")
+    private Set<BoardColumn> boardColumns = new LinkedHashSet<>();
 
-    // here no @JsonIgnore => to be able to add a user via JPA
-    /* https://www.baeldung.com/jpa-remove-entity-many-to-many
-     * this Object is the owner of the relationship
-    java.sql.SQLException: (conn=26) Cannot delete or update a parent row: a foreign key constraint fails (`tasks`.`project_users`, CONSTRAINT `FKn2d9w5xxgord5j4k2963p8o1g` FOREIGN KEY (`project_id`) REFERENCES `projects` (`id`))
-at org.mariadb.jdbc.export.ExceptionFactory.createException(ExceptionFactory.java:297)
-     */
-    @ManyToMany//(cascade = {CascadeType.DETACH, CascadeType.MERGE, CascadeType.PERSIST, CascadeType.REFRESH})
-    @JoinTable(
-            name = "project_members",
-            joinColumns = @JoinColumn(name = "project_id"),
-            inverseJoinColumns = @JoinColumn(name = "user_id")
-    )
-    private Set<User> members = new HashSet<>();
+    @JsonIgnore
+    @OneToMany(mappedBy = "project", cascade = CascadeType.ALL, orphanRemoval = true)
+    private Set<ProjectMember> members = new LinkedHashSet<>();
+
+    @JsonIgnore
+    @OneToMany(mappedBy = "project", cascade = CascadeType.ALL, orphanRemoval = true)
+    private Set<Task> tasks = new LinkedHashSet<>();
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        Project project = (Project) o;
+        return id != null && Objects.equals(id, project.id);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hashCode(id);
+    }
 }

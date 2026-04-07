@@ -1,94 +1,143 @@
 package de.acosci.tasks.service.impl;
 
+import de.acosci.tasks.model.dto.ProjectCreateDTO;
+import de.acosci.tasks.model.dto.ProjectUpdateDTO;
+import de.acosci.tasks.model.entity.BoardColumn;
 import de.acosci.tasks.model.entity.Project;
+import de.acosci.tasks.model.entity.ProjectMember;
 import de.acosci.tasks.model.entity.User;
+import de.acosci.tasks.model.enums.BoardColumnType;
+import de.acosci.tasks.model.enums.ProjectRole;
+import de.acosci.tasks.repository.ProjectMemberRepository;
 import de.acosci.tasks.repository.ProjectRepository;
+import de.acosci.tasks.repository.UserRepository;
 import de.acosci.tasks.service.ProjectService;
-import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
-/** Rules
- * ROLE_USER:       Authorized to read projects, where it is member
- * ROLE_MODERATOR:  Authorized to create, update and delete own projects (creator) or read as member or owner.
- * ROLE_ADMIN:      Authorized to do all CRUD operations on all projects.
- */
 @Service
 @RequiredArgsConstructor
+@Transactional
 public class ProjectServiceImpl implements ProjectService {
 
+    private static final String DEFAULT_NOT_ASSIGNED_COLUMN_NAME = "Not assigned";
+
     private final ProjectRepository projectRepository;
-
-    private User getCurrentUser() {
-        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        return (User) auth.getPrincipal();
-    }
-
-    // -------------------------
-    // READ
-    // -------------------------
+    private final ProjectMemberRepository projectMemberRepository;
+    private final UserRepository userRepository;
 
     @Override
-    @PreAuthorize("hasRole('ROLE_ADMIN') " +
-            "or hasRole('ROLE_MODERATOR') and (@projectSecurity.isOwner(#id, principal.id) or @projectSecurity.isMember(#id, principal.id)) " +
-            "or hasRole('ROLE_USER') and @projectSecurity.isMember(#id, principal.id)")
-    public Project findById(Long id) {
-        return projectRepository.findById(id)
-                .orElseThrow(() -> new EntityNotFoundException("Project not found with id " + id));
+    @Transactional(readOnly = true)
+    public List<Project> getProjectsVisibleForCurrentUser() {
+        User currentUser = getCurrentUser();
+
+        return projectMemberRepository.findAllByUser_Id(currentUser.getId())
+                .stream()
+                .map(ProjectMember::getProject)
+                .distinct()
+                .toList();
     }
 
     @Override
-    @PreAuthorize("hasRole('ROLE_ADMIN') or #userId == principal.id")
-    public List<Project> getAllProjectsByCreatorID(Long userId) {
-        return projectRepository.findByCreator_Id(userId);
+    @Transactional(readOnly = true)
+    public Project getVisibleProjectById(Long projectId) {
+        User currentUser = getCurrentUser();
+
+        return projectMemberRepository.findByProject_IdAndUser_Id(projectId, currentUser.getId())
+                .map(ProjectMember::getProject)
+                .orElseThrow(() -> new IllegalArgumentException("Project not visible for current user: " + projectId));
     }
 
     @Override
-    @PreAuthorize("hasRole('ROLE_ADMIN') or #userId == principal.id")
-    public List<Project> getAllProjectsByMembersID(Long userId) {
-        return projectRepository.findByMembers_Id(userId);
+    public Project createProject(ProjectCreateDTO dto) {
+        User currentUser = getCurrentUser();
+
+        Project project = new Project();
+        project.setName(dto.getName());
+        project.setDescription(dto.getDescription());
+        project.setCreator(currentUser);
+        project = projectRepository.save(project);
+
+        ProjectMember ownerMembership = new ProjectMember();
+        ownerMembership.setProject(project);
+        ownerMembership.setUser(currentUser);
+        ownerMembership.setRole(ProjectRole.OWNER);
+        projectMemberRepository.save(ownerMembership);
+
+        initializeDefaultBoardColumns(project);
+        return project;
     }
 
     @Override
-    @PreAuthorize("hasRole('ROLE_ADMIN')")
-    public List<Project> findAll() {
-        return projectRepository.findAll();
-    }
+    public Project updateProject(Long projectId, ProjectUpdateDTO dto) {
+        Project project = getManageableProjectById(projectId);
 
-    // -------------------------
-    // CREATE & UPDATE
-    // -------------------------
+        project.setName(dto.getName());
+        project.setDescription(dto.getDescription());
+        project.setArchived(dto.isArchived());
 
-    @Override
-    @PreAuthorize("hasRole('ROLE_ADMIN') " +
-            "or hasRole('ROLE_MODERATOR') and (#project.id == null or @projectSecurity.isOwner(#project.id, principal.id))")
-    public Project save(Project project) {
-        if (project.getId() == null) {
-            // Creator automatisch setzen
-            User current = getCurrentUser();
-            project.setCreator(current);
-        }
         return projectRepository.save(project);
     }
 
-    // -------------------------
-    // DELETE
-    // -------------------------
-
     @Override
-    @PreAuthorize("hasRole('ROLE_ADMIN') or hasRole('ROLE_MODERATOR') and @projectSecurity.isOwner(#id, principal.id)")
-    public void deleteById(Long id) {
-        projectRepository.deleteById(id);
+    public Project archiveProject(Long projectId) {
+        Project project = getManageableProjectById(projectId);
+        project.setArchived(true);
+        return projectRepository.save(project);
     }
 
     @Override
-    @PreAuthorize("hasRole('ROLE_ADMIN') or hasRole('ROLE_MODERATOR') and @projectSecurity.isOwner(#project.id, principal.id)")
-    public void delete(Project project) {
+    public void deleteProject(Long projectId) {
+        Project project = getManageableProjectById(projectId);
         projectRepository.delete(project);
+    }
+
+
+    private void initializeDefaultBoardColumns(Project project) {
+        project.getBoardColumns().add(createSystemBoardColumn(project, DEFAULT_NOT_ASSIGNED_COLUMN_NAME, 0));
+        project.getBoardColumns().add(createCustomBoardColumn(project, "To Do", 1));
+        project.getBoardColumns().add(createCustomBoardColumn(project, "In Progress", 2));
+        project.getBoardColumns().add(createCustomBoardColumn(project, "Done", 3));
+    }
+
+    private BoardColumn createSystemBoardColumn(Project project, String name, int position) {
+        BoardColumn column = createCustomBoardColumn(project, name, position);
+        column.setType(BoardColumnType.SYSTEM);
+        column.setDeletable(false);
+        return column;
+    }
+
+    private BoardColumn createCustomBoardColumn(Project project, String name, int position) {
+        BoardColumn column = new BoardColumn();
+        column.setProject(project);
+        column.setName(name);
+        column.setPosition(position);
+        return column;
+    }
+
+    private Project getManageableProjectById(Long projectId) {
+        User currentUser = getCurrentUser();
+
+        ProjectMember membership = projectMemberRepository.findByProject_IdAndUser_Id(projectId, currentUser.getId())
+                .orElseThrow(() -> new IllegalArgumentException("Project not visible for current user: " + projectId));
+
+        if (membership.getRole() != ProjectRole.OWNER && membership.getRole() != ProjectRole.MAINTAINER) {
+            throw new IllegalArgumentException("Project not manageable for current user: " + projectId);
+        }
+
+        return membership.getProject();
+    }
+
+    private User getCurrentUser() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        String email = authentication.getName();
+
+        return userRepository.findByEmail(email)
+                .orElseThrow(() -> new IllegalStateException("Authenticated user not found: " + email));
     }
 }

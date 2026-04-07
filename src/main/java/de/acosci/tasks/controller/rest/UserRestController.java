@@ -1,8 +1,10 @@
 package de.acosci.tasks.controller.rest;
 
 import de.acosci.tasks.model.dto.ChangePasswordDTO;
-import de.acosci.tasks.model.entity.User;
-import de.acosci.tasks.service.impl.UserServiceImpl;
+import de.acosci.tasks.model.dto.UserResponseDTO;
+import de.acosci.tasks.model.dto.UserUpdateDTO;
+import de.acosci.tasks.model.mapper.UserMapper;
+import de.acosci.tasks.service.UserService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -11,6 +13,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.persistence.EntityNotFoundException;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -22,12 +25,12 @@ import org.springframework.web.bind.annotation.*;
 @Tag(name = "Users", description = "REST-API für Benutzeraktionen des eigenen Accounts")
 public class UserRestController {
 
-    private final UserServiceImpl userService;
+    private final UserService userService;
 
     @Operation(summary = "Benutzer anhand der ID abrufen", description = "Erlaubt nur für den Benutzer selbst oder Administratoren.")
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Benutzer erfolgreich gefunden",
-                    content = @Content(schema = @Schema(implementation = User.class))),
+                    content = @Content(schema = @Schema(implementation = UserResponseDTO.class))),
             @ApiResponse(responseCode = "403", description = "Zugriff verboten", content = @Content),
             @ApiResponse(responseCode = "404", description = "Benutzer nicht gefunden", content = @Content)
     })
@@ -37,7 +40,7 @@ public class UserRestController {
             @Parameter(description = "ID des Benutzers", example = "1", required = true)
             @PathVariable long id) {
         try {
-            return ResponseEntity.ok(userService.getUserByID(id));
+            return ResponseEntity.ok(UserMapper.toUserResponseDTO(userService.getUserByID(id)));
         } catch (EntityNotFoundException e) {
             return ResponseEntity.notFound().build();
         }
@@ -46,7 +49,7 @@ public class UserRestController {
     @Operation(summary = "Eigenen Benutzer aktualisieren", description = "Erlaubt nur für den Benutzer selbst oder Administratoren.")
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Benutzer erfolgreich aktualisiert",
-                    content = @Content(schema = @Schema(implementation = User.class))),
+                    content = @Content(schema = @Schema(implementation = UserResponseDTO.class))),
             @ApiResponse(responseCode = "403", description = "Zugriff verboten", content = @Content),
             @ApiResponse(responseCode = "404", description = "Benutzer nicht gefunden", content = @Content)
     })
@@ -55,10 +58,9 @@ public class UserRestController {
     public ResponseEntity<?> updateUserById(
             @Parameter(description = "ID des zu aktualisierenden Benutzers", example = "1", required = true)
             @PathVariable Long id,
-            @RequestBody User user) {
+            @Valid @RequestBody UserUpdateDTO dto) {
         try {
-            user.setId(id);
-            return ResponseEntity.ok(userService.saveUser(user));
+            return ResponseEntity.ok(UserMapper.toUserResponseDTO(userService.updateUser(id, dto)));
         } catch (EntityNotFoundException e) {
             return ResponseEntity.notFound().build();
         }
@@ -84,26 +86,10 @@ public class UserRestController {
                     + "Prüft das aktuelle Passwort und setzt anschließend ein neues Passwort."
     )
     @ApiResponses({
-            @ApiResponse(
-                    responseCode = "200",
-                    description = "Passwort erfolgreich geändert",
-                    content = @Content
-            ),
-            @ApiResponse(
-                    responseCode = "400",
-                    description = "Ungültige Eingabedaten oder aktuelles Passwort falsch",
-                    content = @Content
-            ),
-            @ApiResponse(
-                    responseCode = "403",
-                    description = "Zugriff verboten",
-                    content = @Content
-            ),
-            @ApiResponse(
-                    responseCode = "404",
-                    description = "Benutzer nicht gefunden",
-                    content = @Content
-            )
+            @ApiResponse(responseCode = "200", description = "Passwort erfolgreich geändert", content = @Content),
+            @ApiResponse(responseCode = "400", description = "Ungültige Eingabedaten oder aktuelles Passwort falsch", content = @Content),
+            @ApiResponse(responseCode = "403", description = "Zugriff verboten", content = @Content),
+            @ApiResponse(responseCode = "404", description = "Benutzer nicht gefunden", content = @Content)
     })
     @PreAuthorize("hasRole('ADMIN') or @userSecurity.isSelf(#id)")
     @PatchMapping("/{id}/password")
@@ -115,7 +101,7 @@ public class UserRestController {
                     required = true,
                     content = @Content(schema = @Schema(implementation = ChangePasswordDTO.class))
             )
-            @RequestBody ChangePasswordDTO dto) {
+            @Valid @RequestBody ChangePasswordDTO dto) {
         try {
             userService.changePassword(id, dto);
             return ResponseEntity.ok().build();

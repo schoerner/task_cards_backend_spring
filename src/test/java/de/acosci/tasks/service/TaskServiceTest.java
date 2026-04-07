@@ -1,11 +1,22 @@
 package de.acosci.tasks.service;
 
-import de.acosci.tasks.model.entity.*;
+import de.acosci.tasks.model.dto.TaskCreateDTO;
+import de.acosci.tasks.model.dto.TaskResponseDTO;
+import de.acosci.tasks.model.dto.TaskUpdateDTO;
+import de.acosci.tasks.model.dto.TimeRecordResponseDTO;
+import de.acosci.tasks.model.entity.BoardColumn;
+import de.acosci.tasks.model.entity.Project;
+import de.acosci.tasks.model.entity.Task;
+import de.acosci.tasks.model.entity.TimeRecord;
+import de.acosci.tasks.model.entity.User;
+import de.acosci.tasks.model.enums.TaskPriority;
+import de.acosci.tasks.repository.BoardColumnRepository;
+import de.acosci.tasks.repository.ProjectRepository;
+import de.acosci.tasks.repository.TaskLabelRepository;
 import de.acosci.tasks.repository.TaskRepository;
 import de.acosci.tasks.repository.TimeRecordRepository;
 import de.acosci.tasks.repository.UserRepository;
 import de.acosci.tasks.service.impl.TaskServiceImpl;
-import jakarta.persistence.EntityNotFoundException;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -16,36 +27,73 @@ import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
-import java.util.*;
+import java.util.Collections;
+import java.util.Date;
+import java.util.List;
+import java.util.Optional;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-/*
-IOC-Container
- */
-@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.NONE, classes = {TaskServiceImpl.class}) // Embedded webserver wird für Test nicht hochgefahren
+@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.NONE, classes = {TaskServiceImpl.class})
 class TaskServiceTest {
 
-    @MockitoBean // Beans the Service under test depends on
+    @MockitoBean
     private TaskRepository taskRepository;
     @MockitoBean
-    private TimeRecordRepository timeRecordRepository;
+    private ProjectRepository projectRepository;
+    @MockitoBean
+    private BoardColumnRepository boardColumnRepository;
     @MockitoBean
     private UserRepository userRepository;
+    @MockitoBean
+    private TaskLabelRepository taskLabelRepository;
+    @MockitoBean
+    private TimeRecordRepository timeRecordRepository;
 
     @Autowired
     private TaskServiceImpl taskService;
 
-    private final User mockUser = new User(1L, "test@test.org", new Date(), "Geheim01", "Geheim01", "John", "Doe", new UserProfile(), new ArrayList<>(), new HashSet<>(), new HashSet<>(), new HashSet<>(), new HashSet<>());
-    private final Task mockTask1 = new Task(1L, "Test Task 1", "Description for Test Task 1", 20d, false, mockUser, new HashSet<>(), new Project(), new ArrayList<>(), false, null, new ArrayList<>());
-    private final Task mockTask2 = new Task(2L, "Test Task 2", "Description for Test Task 1", 80d, false, mockUser, new HashSet<>(), new Project(), new ArrayList<>(), false, null, new ArrayList<>());
+    private User mockUser;
+    private Project mockProject;
+    private BoardColumn defaultColumn;
+    private Task mockTask;
 
     @BeforeEach
     void setUp() {
-        mockUser.getTasks().clear();
-        mockUser.getTasks().add(mockTask1);
-        mockUser.getTasks().add(mockTask2);
+        mockUser = new User();
+        mockUser.setId(1L);
+        mockUser.setEmail("test@test.org");
+        mockUser.setPassword("Geheim01");
+        mockUser.setFirstName("John");
+        mockUser.setLastName("Doe");
+
+        mockProject = new Project();
+        mockProject.setId(100L);
+        mockProject.setName("Project A");
+        mockProject.setCreator(mockUser);
+
+        defaultColumn = new BoardColumn();
+        defaultColumn.setId(10L);
+        defaultColumn.setProject(mockProject);
+        defaultColumn.setName("Not assigned");
+        defaultColumn.setPosition(0);
+
+        mockTask = new Task();
+        mockTask.setId(5L);
+        mockTask.setProject(mockProject);
+        mockTask.setBoardColumn(defaultColumn);
+        mockTask.setCreator(mockUser);
+        mockTask.setTitle("Old title");
+        mockTask.setPriority(TaskPriority.MEDIUM);
+        mockTask.setTrackedMinutes(0);
+        mockTask.setEstimatedMinutes(0);
 
         SecurityContext context = SecurityContextHolder.createEmptyContext();
         context.setAuthentication(
@@ -54,6 +102,14 @@ class TaskServiceTest {
         SecurityContextHolder.setContext(context);
 
         when(userRepository.findByEmail(mockUser.getEmail())).thenReturn(Optional.of(mockUser));
+        when(projectRepository.findById(mockProject.getId())).thenReturn(Optional.of(mockProject));
+        when(boardColumnRepository.findByProject_IdAndName(mockProject.getId(), "Not assigned"))
+                .thenReturn(Optional.of(defaultColumn));
+        when(taskLabelRepository.findAllById(any())).thenReturn(Collections.emptyList());
+        when(userRepository.findAllById(any())).thenReturn(Collections.emptyList());
+        when(timeRecordRepository.findAllByTask_IdOrderByTimeStartDesc(mockTask.getId())).thenReturn(Collections.emptyList());
+        when(timeRecordRepository.findFirstByTask_IdAndTimeEndIsNullOrderByTimeStartDesc(mockTask.getId()))
+                .thenReturn(Optional.empty());
     }
 
     @AfterEach
@@ -62,173 +118,159 @@ class TaskServiceTest {
     }
 
     @Test
-    void getAllTasks() {
-        // Arrange
-        when(taskRepository.findAll()).thenReturn(Arrays.asList(mockTask1, mockTask2));
+    void createTask_usesDefaultColumnWhenNoColumnProvided() {
+        TaskCreateDTO dto = new TaskCreateDTO();
+        dto.setProjectId(mockProject.getId());
+        dto.setTitle("New task");
+        dto.setDescription("Desc");
+        dto.setPriority(TaskPriority.HIGH);
 
-        // Act
-        var allTasks = taskService.getAllTasks();
+        when(taskRepository.save(any(Task.class))).thenAnswer(invocation -> {
+            Task task = invocation.getArgument(0);
+            task.setId(77L);
+            return task;
+        });
 
-        // Assert
-        assertNotNull(allTasks);
-        assertEquals(2, allTasks.size());
+        TaskResponseDTO created = taskService.createTask(dto);
+
+        assertEquals("New task", created.getTitle());
+        assertEquals(defaultColumn.getId(), created.getBoardColumn().getId());
+        assertEquals(TaskPriority.HIGH, created.getPriority());
+        assertEquals(0, created.getTrackedMinutes());
     }
 
     @Test
-    void getTaskById_butTaskNotFound() {
-        //assertThrows(EntityNotFoundException.class, () -> taskService.isActive(nonExistent));
-        assertThrows(EntityNotFoundException.class, () -> taskService.isActive(-1L));
+    void updateTask_updatesFields_butNotTrackedMinutesDirectly() {
+        TaskUpdateDTO dto = new TaskUpdateDTO();
+        dto.setTitle("Updated");
+        dto.setDescription("Updated desc");
+        dto.setPriority(TaskPriority.LOW);
+        dto.setEstimatedMinutes(45);
+
+        when(taskRepository.findById(mockTask.getId())).thenReturn(Optional.of(mockTask));
+        when(taskRepository.save(any(Task.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        TaskResponseDTO updated = taskService.updateTask(mockTask.getId(), dto);
+
+        assertEquals("Updated", updated.getTitle());
+        assertEquals(TaskPriority.LOW, updated.getPriority());
+        assertEquals(0, updated.getTrackedMinutes());
+        assertEquals(45, updated.getEstimatedMinutes());
     }
 
     @Test
-    void getActiveTasks_noneActive() {
-        // Arrange
-        when(taskRepository.findAll()).thenReturn(Arrays.asList(mockTask1, mockTask2));
-
-        // Act
-        var activeTasks = taskService.getActiveTasks();
-
-        // Assert
-        assertNotNull(activeTasks);
-        assertEquals(0, activeTasks.size());
+    void getTaskById_missingTaskThrows() {
+        when(taskRepository.findById(999L)).thenReturn(Optional.empty());
+        assertThrows(IllegalArgumentException.class, () -> taskService.getTaskById(999L));
     }
 
     @Test
-    void isActive_noStartedTask_noneIsActive() {
-        // Assert
-        when(taskRepository.findById(1L)).thenReturn(Optional.of(mockTask1));
+    void archiveTask_setsArchivedFlag() {
+        when(taskRepository.findById(mockTask.getId())).thenReturn(Optional.of(mockTask));
+        when(taskRepository.save(any(Task.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
-        // Act
-        assertDoesNotThrow(() -> {taskService.isActive(mockTask1);});
-        boolean isActive = taskService.isActive(mockTask1);
-        TimeRecord activeTimeRecord = taskService.getActiveTimeRecord(mockTask1);
-
-        // Assert
-        assertFalse(isActive);
-        assertNull(activeTimeRecord);
+        TaskResponseDTO archived = taskService.archiveTask(mockTask.getId());
+        assertTrue(archived.isArchived());
     }
 
     @Test
-    void startTaskByTask_taskIsActive() {
-        // Arrange
-        when(taskRepository.findAll()).thenReturn(Arrays.asList(mockTask1, mockTask2));
-        when(taskRepository.findById(1L)).thenReturn(Optional.of(mockTask1));
-        when(taskRepository.save(mockTask1)).thenReturn(mockTask1);
+    void getTimeRecords_returnsRepositoryResult() {
+        TimeRecord r1 = new TimeRecord();
+        r1.setId(1L);
+        r1.setTask(mockTask);
 
-        // Act
-        Task startedTask = taskService.startTask(mockTask1.getId());
-        var activeTasks = taskService.getActiveTasks();
-        boolean isActive = taskService.isActive(mockTask1);
-        TimeRecord activeTimeRecord = taskService.getActiveTimeRecord(mockTask1);
+        TimeRecord r2 = new TimeRecord();
+        r2.setId(2L);
+        r2.setTask(mockTask);
 
-        // Assert
-        assertNotNull(startedTask);
-        assertTrue(startedTask.isActive());
+        when(taskRepository.findById(mockTask.getId())).thenReturn(Optional.of(mockTask));
+        when(timeRecordRepository.findAllByTask_IdOrderByTimeStartDesc(mockTask.getId()))
+                .thenReturn(List.of(r1, r2));
 
-        assertNotNull(activeTasks);
-        assertTrue(activeTasks.contains(startedTask));
-        assertEquals(1, activeTasks.size());
+        List<TimeRecordResponseDTO> result = taskService.getTimeRecords(mockTask.getId());
 
-        assertTrue(isActive);
-        assertNotNull(activeTimeRecord);
+        assertEquals(2, result.size());
+        assertEquals(1L, result.get(0).getId());
+        assertEquals(mockTask.getId(), result.get(0).getTaskId());
     }
 
     @Test
-    void startTaskByTaskID_taskIsActive() {
-        // Arrange
-        when(taskRepository.findAll()).thenReturn(Arrays.asList(mockTask1, mockTask2));
-        when(taskRepository.findById(1L)).thenReturn(Optional.of(mockTask1));
-        when(taskRepository.save(mockTask1)).thenReturn(mockTask1);
+    void isActive_returnsTrue_whenOpenTimeRecordExists() {
+        TimeRecord activeRecord = new TimeRecord();
+        activeRecord.setId(7L);
+        activeRecord.setTask(mockTask);
+        activeRecord.setTimeStart(new Date());
+        activeRecord.setTimeEnd(null);
 
-        // Act
-        Task startedTask = taskService.startTask(1L);
-        var activeTasks = taskService.getActiveTasks();
-        boolean isActive = taskService.isActive(1L);
-        TimeRecord activeTimeRecord = taskService.getActiveTimeRecord(1L);
+        when(taskRepository.findById(mockTask.getId())).thenReturn(Optional.of(mockTask));
+        when(timeRecordRepository.findFirstByTask_IdAndTimeEndIsNullOrderByTimeStartDesc(mockTask.getId()))
+                .thenReturn(Optional.of(activeRecord));
 
-        // Assert
-        assertNotNull(startedTask);
-        assertTrue(startedTask.isActive());
-
-        assertNotNull(activeTasks);
-        assertTrue(activeTasks.contains(startedTask));
-        assertEquals(1, activeTasks.size());
-
-        assertTrue(isActive);
-        assertNotNull(activeTimeRecord);
+        assertTrue(taskService.isActive(mockTask.getId()));
     }
 
     @Test
-    void stopTaskByTaskID_taskIsNotActive() {
-        // Arrange
-        when(taskRepository.findAll()).thenReturn(Arrays.asList(mockTask1, mockTask2));
-        when(taskRepository.findById(1L)).thenReturn(Optional.of(mockTask1));
-        when(taskRepository.findById(2L)).thenReturn(Optional.of(mockTask2));
-        when(taskRepository.save(mockTask1)).thenReturn(mockTask1);
+    void isActive_returnsFalse_whenNoOpenTimeRecordExists() {
+        when(taskRepository.findById(mockTask.getId())).thenReturn(Optional.of(mockTask));
+        when(timeRecordRepository.findFirstByTask_IdAndTimeEndIsNullOrderByTimeStartDesc(mockTask.getId()))
+                .thenReturn(Optional.empty());
 
-        // Act
-        assertThrows(IllegalStateException.class, () -> taskService.stopTask(1L));
-        var activeTasks = taskService.getActiveTasks();
-        boolean isActive = taskService.isActive(1L);
-        TimeRecord activeTimeRecord = taskService.getActiveTimeRecord(1L);
-
-        // Assert
-        assertNotNull(activeTasks);
-        assertEquals(0, activeTasks.size());
-        assertFalse(isActive);
-        assertNull(activeTimeRecord);
+        assertFalse(taskService.isActive(mockTask.getId()));
     }
 
     @Test
-    void stopTaskByTask_taskIsNotActive() {
-        // Arrange
-        when(taskRepository.findAll()).thenReturn(Arrays.asList(mockTask1, mockTask2));
-        when(taskRepository.findById(1L)).thenReturn(Optional.of(mockTask1));
-        when(taskRepository.findById(2L)).thenReturn(Optional.of(mockTask2));
-        when(taskRepository.save(mockTask1)).thenReturn(mockTask1);
+    void startTimeTracking_createsNewTimeRecord() {
+        when(taskRepository.findById(mockTask.getId())).thenReturn(Optional.of(mockTask));
+        when(timeRecordRepository.findFirstByTask_IdAndTimeEndIsNullOrderByTimeStartDesc(mockTask.getId()))
+                .thenReturn(Optional.empty());
+        when(timeRecordRepository.save(any(TimeRecord.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(taskRepository.save(any(Task.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
-        // Act
-        Task startedTask = taskService.startTask(mockTask1.getId());
-        Task stoppedTask = taskService.stopTask(mockTask1.getId());
-        var activeTasks = taskService.getActiveTasks();
-        boolean isActive = taskService.isActive(mockTask1);
-        TimeRecord activeTimeRecord = taskService.getActiveTimeRecord(mockTask1);
+        TaskResponseDTO result = taskService.startTimeTracking(mockTask.getId());
 
-        // Assert
-        assertNotNull(startedTask);
-        assertNotNull(stoppedTask);
-        assertFalse(stoppedTask.isActive());
-        assertNotNull(activeTasks);
-        assertEquals(0, activeTasks.size());
-        assertFalse(activeTasks.contains(stoppedTask));
-        assertFalse(isActive);
-        assertNull(activeTimeRecord);
+        assertEquals(mockTask.getId(), result.getId());
+        assertTrue(result.isActive());
+        verify(timeRecordRepository).save(any(TimeRecord.class));
+        verify(taskRepository).save(mockTask);
     }
 
     @Test
-    void getAllTasks_validID() {
-        // Arrange
-        when(taskRepository.findById(1L)).thenReturn(Optional.of(mockTask1));
+    void startTimeTracking_throwsWhenAlreadyActive() {
+        TimeRecord activeRecord = new TimeRecord();
+        activeRecord.setId(99L);
+        activeRecord.setTask(mockTask);
+        activeRecord.setTimeStart(new Date());
+        activeRecord.setTimeEnd(null);
 
-        // Act
-        Task actualTask = taskService.getTaskByID(1L);
+        when(taskRepository.findById(mockTask.getId())).thenReturn(Optional.of(mockTask));
+        when(timeRecordRepository.findFirstByTask_IdAndTimeEndIsNullOrderByTimeStartDesc(mockTask.getId()))
+                .thenReturn(Optional.of(activeRecord));
 
-        // Assert
-        assertNotNull(actualTask);
-        assertEquals(mockTask1, actualTask);
+        assertThrows(IllegalStateException.class, () -> taskService.startTimeTracking(mockTask.getId()));
+
+        verify(timeRecordRepository, never()).save(any(TimeRecord.class));
     }
 
     @Test
-    void getAllTasks_invalidID_throwsEntityNotFoundException() {
-        // Arrange
-        when(taskRepository.findById(1L)).thenReturn(Optional.of(mockTask1));
-        when(taskRepository.findById(2L)).thenReturn(Optional.of(mockTask2));
+    void stopTimeTracking_closesActiveRecord_andUpdatesTrackedMinutes() {
+        TimeRecord activeRecord = new TimeRecord();
+        activeRecord.setId(15L);
+        activeRecord.setTask(mockTask);
+        activeRecord.setTimeStart(new Date(System.currentTimeMillis() - 30L * 60L * 1000L));
+        activeRecord.setTimeEnd(null);
 
-        // Act and Assert
-        assertThrows(EntityNotFoundException.class, () -> taskService.getTaskByID(0L));
-        assertDoesNotThrow(() -> taskService.getTaskByID(1L));
-        assertDoesNotThrow(() -> taskService.getTaskByID(2L));
-        assertThrows(EntityNotFoundException.class, () -> taskService.getTaskByID(3L));
+        mockTask.getTimeRecords().add(activeRecord);
+
+        when(taskRepository.findById(mockTask.getId())).thenReturn(Optional.of(mockTask));
+        when(timeRecordRepository.findFirstByTask_IdAndTimeEndIsNullOrderByTimeStartDesc(mockTask.getId()))
+                .thenReturn(Optional.of(activeRecord));
+        when(timeRecordRepository.save(any(TimeRecord.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(taskRepository.save(any(Task.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        TaskResponseDTO result = taskService.stopTimeTracking(mockTask.getId());
+
+        assertFalse(result.isActive());
+        assertTrue(result.getTrackedMinutes() >= 29);
+        verify(timeRecordRepository).save(activeRecord);
     }
-
 }

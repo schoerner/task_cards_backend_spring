@@ -3,8 +3,9 @@ package de.acosci.tasks.controller.rest;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import de.acosci.tasks.common.config.JwtAuthenticationFilter;
 import de.acosci.tasks.model.dto.ChangePasswordDTO;
+import de.acosci.tasks.model.dto.UserUpdateDTO;
 import de.acosci.tasks.model.entity.User;
-import de.acosci.tasks.service.impl.UserServiceImpl;
+import de.acosci.tasks.service.UserService;
 import jakarta.persistence.EntityNotFoundException;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -26,8 +27,14 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.*;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @WebMvcTest(
@@ -50,7 +57,7 @@ class UserRestControllerTest {
     private UserSecurityStub userSecurity;
 
     @MockitoBean
-    private UserServiceImpl userService;
+    private UserService userService;
 
     @TestConfiguration
     @EnableMethodSecurity
@@ -136,9 +143,13 @@ class UserRestControllerTest {
     @DisplayName("PUT /api/v1/users/{id} ist für ADMIN erlaubt")
     @WithMockUser(roles = "ADMIN")
     void updateUserById_asAdmin_returnsOk() throws Exception {
-        User input = new User();
+        UserUpdateDTO input = new UserUpdateDTO();
+        input.setEmail("test@test.de");
+        input.setFirstName("Max");
+        input.setLastName("Mustermann");
+
         User saved = new User();
-        when(userService.saveUser(any(User.class))).thenReturn(saved);
+        when(userService.updateUser(eq(1L), any(UserUpdateDTO.class))).thenReturn(saved);
 
         mockMvc.perform(put("/api/v1/users/1")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -151,9 +162,14 @@ class UserRestControllerTest {
     @WithMockUser(roles = "USER")
     void updateUserById_asSelf_returnsOk() throws Exception {
         userSecurity.allowSelf = true;
-        User input = new User();
+
+        UserUpdateDTO input = new UserUpdateDTO();
+        input.setEmail("test@test.de");
+        input.setFirstName("Max");
+        input.setLastName("Mustermann");
+
         User saved = new User();
-        when(userService.saveUser(any(User.class))).thenReturn(saved);
+        when(userService.updateUser(eq(1L), any(UserUpdateDTO.class))).thenReturn(saved);
 
         mockMvc.perform(put("/api/v1/users/1")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -166,7 +182,11 @@ class UserRestControllerTest {
     @WithMockUser(roles = "USER")
     void updateUserById_asOtherUser_returnsForbidden() throws Exception {
         userSecurity.allowSelf = false;
-        User input = new User();
+
+        UserUpdateDTO input = new UserUpdateDTO();
+        input.setEmail("test@test.de");
+        input.setFirstName("Max");
+        input.setLastName("Mustermann");
 
         mockMvc.perform(put("/api/v1/users/2")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -178,8 +198,13 @@ class UserRestControllerTest {
     @DisplayName("PUT /api/v1/users/{id} liefert 404, wenn der User nicht existiert")
     @WithMockUser(roles = "ADMIN")
     void updateUserById_notFound_returnsNotFound() throws Exception {
-        User input = new User();
-        when(userService.saveUser(any(User.class))).thenThrow(new EntityNotFoundException());
+        UserUpdateDTO input = new UserUpdateDTO();
+        input.setEmail("test@test.de");
+        input.setFirstName("Max");
+        input.setLastName("Mustermann");
+
+        when(userService.updateUser(eq(999L), any(UserUpdateDTO.class)))
+                .thenThrow(new EntityNotFoundException());
 
         mockMvc.perform(put("/api/v1/users/999")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -190,7 +215,10 @@ class UserRestControllerTest {
     @Test
     @DisplayName("PUT /api/v1/users/{id} ist anonym nicht erlaubt")
     void updateUserById_anonymous_returnsUnauthorized() throws Exception {
-        User input = new User();
+        UserUpdateDTO input = new UserUpdateDTO();
+        input.setEmail("test@test.de");
+        input.setFirstName("Max");
+        input.setLastName("Mustermann");
 
         mockMvc.perform(put("/api/v1/users/1")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -337,5 +365,4 @@ class UserRestControllerTest {
                         .content(objectMapper.writeValueAsString(input)))
                 .andExpect(status().isNotFound());
     }
-
 }

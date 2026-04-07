@@ -1,159 +1,101 @@
 package de.acosci.tasks.repository;
 
+import de.acosci.tasks.model.entity.BoardColumn;
 import de.acosci.tasks.model.entity.Project;
+import de.acosci.tasks.model.entity.ProjectMember;
+import de.acosci.tasks.model.entity.Role;
 import de.acosci.tasks.model.entity.Task;
 import de.acosci.tasks.model.entity.User;
-import org.junit.jupiter.api.AfterEach;
+import de.acosci.tasks.model.enums.BoardColumnType;
+import de.acosci.tasks.model.enums.ProjectRole;
+import de.acosci.tasks.model.enums.TaskPriority;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 import org.springframework.test.context.TestPropertySource;
 
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.HashSet;
+import java.util.Set;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
-//@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.NONE)//, classes = {TaskServiceImpl.class})
-@DataJpaTest // https://courses.baeldung.com/courses/1295711/lectures/30127904
-//@AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.ANY)
-//@Transactional(propagation = Propagation.NOT_SUPPORTED)
-@TestPropertySource("classpath:application-test.properties") // H2 for Testing: https://medium.com/@akshatakanaje08/setting-up-h2-for-testing-in-spring-boot-application-7f016220a475
+@DataJpaTest
+@TestPropertySource("classpath:application-test.properties")
 class TaskRepositoryTest {
 
     @Autowired
     private TaskRepository taskRepository;
-
     @Autowired
     private ProjectRepository projectRepository;
-
-    @Autowired
-    private TimeRecordRepository timeRecordRepository;
-
     @Autowired
     private UserRepository userRepository;
+    @Autowired
+    private ProjectMemberRepository projectMemberRepository;
+    @Autowired
+    private BoardColumnRepository boardColumnRepository;
+    @Autowired
+    private RoleRepository roleRepository;
 
-    private final User user1 = new User();
-    private final User user2 = new User();
-    private final Project project1 = new Project();
-    private final Task task1 = new Task();
-    private final Task task2 = new Task();
+    private User user1;
+    private Project project1;
+    private BoardColumn notAssigned;
 
     @BeforeEach
     void setUp() {
+        Role roleUser = new Role();
+        roleUser.setName(Role.RoleName.ROLE_USER);
+        roleRepository.save(roleUser);
+
+        user1 = new User();
         user1.setEmail("test@user1.de");
         user1.setPassword("password1");
         user1.setFirstName("Max");
         user1.setLastName("Mustermann");
-        user1.setRegistration(new Date());
-        user1.setTasks(new ArrayList<>());
-        user1.setProjects(new HashSet<>());
+        user1.setRoles(Set.of(roleUser));
+        user1 = userRepository.save(user1);
 
-        user2.setEmail("test@user2.de");
-        user2.setPassword("password2");
-        user2.setFirstName("Heike");
-        user2.setLastName("Musterfrau");
-        user2.setRegistration(new Date());
-        user2.setTasks(new ArrayList<>());
-        user2.setProjects(new HashSet<>());
-
+        project1 = new Project();
         project1.setName("Projekt1");
-        project1.setTasks(new ArrayList<>());
-        project1.setMembers(new HashSet<>());
-    }
+        project1.setCreator(user1);
+        project1 = projectRepository.save(project1);
 
-    @AfterEach
-    void tearDown() {
-    }
+        ProjectMember member = new ProjectMember();
+        member.setProject(project1);
+        member.setUser(user1);
+        member.setRole(ProjectRole.OWNER);
+        projectMemberRepository.save(member);
 
-    @Test
-    void testCreateAProjectWith2Users() {
-        assertEquals(0, userRepository.count());
-        assertEquals(0, projectRepository.count());
-
-        assertNull(user1.getId());
-        User insertedUser1 = userRepository.save(user1);
-        assertEquals(1, userRepository.count());
-        assertNotNull(insertedUser1.getId());
-
-        insertedUser1 = userRepository.save(user1);
-        assertEquals(1, userRepository.count());
-
-        User insertedUser2 = userRepository.save(user2);
-        assertEquals(2, userRepository.count());
-
-        assertNull(project1.getId());
-        Project insertedProject1 = projectRepository.save(project1);
-        assertNotNull(insertedProject1.getId());
-        assertEquals(1, projectRepository.count());
-
-
-        assertTrue(project1.getMembers().add(user1));
-        assertEquals(1, projectRepository.findById(insertedProject1.getId()).get().getMembers().size());
-
-        assertFalse(project1.getMembers().add(user1));
-        assertTrue(project1.getMembers().remove(user1));
-        insertedProject1 = projectRepository.save(project1);
-        assertEquals(0, projectRepository.findById(insertedProject1.getId()).get().getMembers().size());
-
+        notAssigned = new BoardColumn();
+        notAssigned.setProject(project1);
+        notAssigned.setName("Not assigned");
+        notAssigned.setPosition(0);
+        notAssigned.setType(BoardColumnType.SYSTEM);
+        notAssigned.setDeletable(false);
+        notAssigned = boardColumnRepository.save(notAssigned);
     }
 
     @Test
-    void aProjectWith2TasksWithAnUserAndCreatorEach() {
-        assertTrue(project1.getMembers().add(user1));
-        assertFalse(project1.getMembers().add(user1));
-        assertTrue(project1.getMembers().add(user2));
-        assertTrue(project1.getMembers().contains(user1));
-        assertTrue(project1.getMembers().contains(user2));
-
+    void aProjectCanHaveMultipleTasks() {
+        Task task1 = new Task();
         task1.setTitle("Task1");
-        task1.setDescription("Task1 of user 1 description");
+        task1.setDescription("Task1 description");
         task1.setCreator(user1);
         task1.setProject(project1);
-        user1.getTasks().add(task1);
-        project1.getTasks().add(task1);
+        task1.setBoardColumn(notAssigned);
+        task1.setPriority(TaskPriority.MEDIUM);
 
+        Task task2 = new Task();
         task2.setTitle("Task2");
-        task2.setDescription("Task2 of user2 description");
-        task2.setCreator(user2);
+        task2.setDescription("Task2 description");
+        task2.setCreator(user1);
         task2.setProject(project1);
-        user2.getTasks().add(task2);
-        user1.getTasks().add(task2);
+        task2.setBoardColumn(notAssigned);
+        task2.setPriority(TaskPriority.HIGH);
 
-        assertEquals(0, userRepository.count());
-        assertEquals(0, projectRepository.count());
-        assertEquals(0, taskRepository.count());
-        assertEquals(0, timeRecordRepository.count());
-
-        // AA: Set breakpoint and step over: Will the ID be assigned by the repository/H2 database?
-        User insertedUser1 = userRepository.save(user1);
-        assertEquals(user1, insertedUser1);
-        assertEquals(1, userRepository.count());
-        User insertedUser2 = userRepository.save(user2);
-        assertEquals(2, userRepository.count());
-        assertEquals(user2, insertedUser2);
-
-        assertNull(project1.getId());
-        Project insertedProject1 = projectRepository.save(project1);
-        assertNotNull(insertedProject1.getId());
-        assertEquals(project1, insertedProject1);
-        assertEquals(2, projectRepository.findById(insertedProject1.getId()).get().getMembers().size());
-
-        assertEquals(1, projectRepository.count());
         taskRepository.save(task1);
-        assertEquals(1, taskRepository.count());
-
-        project1.getTasks().add(task2);
         taskRepository.save(task2);
-        assertEquals(2, taskRepository.count());
 
-        projectRepository.delete(project1);
-
-        assertEquals(2, userRepository.count());
-        assertEquals(0, projectRepository.count());
-        assertEquals(0, taskRepository.count());
-        assertEquals(0, timeRecordRepository.count());
+        assertEquals(2, taskRepository.findAllByProject_IdAndArchivedFalse(project1.getId()).size());
+        assertEquals(2, taskRepository.findAllByProject_IdAndBoardColumn_IdAndArchivedFalse(project1.getId(), notAssigned.getId()).size());
     }
 }

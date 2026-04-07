@@ -2,5 +2,6 @@
                    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
 
     <include file="version-1.0-tasks-users-task_records.xml" relativeToChangelogFile="true" />
+    <include file="version-2.0-project-board-task-model.xml" relativeToChangelogFile="true" />
 
 </databaseChangeLog>
