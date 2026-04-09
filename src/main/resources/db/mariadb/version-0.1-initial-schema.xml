@@ -1,0 +1,614 @@
+<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+                   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                   xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+                                       http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <changeSet id="version-0.1-initial-schema" author="gernot.schoerner">
+
+        <!-- users -->
+        <createTable tableName="users">
+            <column name="id" type="bigint" autoIncrement="true">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="email" type="varchar(255)">
+                <constraints nullable="false" unique="true" uniqueConstraintName="email_must_be_unique"/>
+            </column>
+            <column name="registration" type="timestamp" defaultValueComputed="CURRENT_TIMESTAMP"/>
+            <column name="password" type="varchar(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="first_name" type="varchar(50)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="last_name" type="varchar(50)">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <!-- roles -->
+        <createTable tableName="roles">
+            <column name="id" type="bigint" autoIncrement="true">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="name" type="varchar(50)">
+                <constraints nullable="false" unique="true" uniqueConstraintName="uk_role_name"/>
+            </column>
+        </createTable>
+
+        <createTable tableName="user_roles">
+            <column name="user_id" type="bigint">
+                <constraints nullable="false"/>
+            </column>
+            <column name="role_id" type="bigint">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <addPrimaryKey tableName="user_roles"
+                       columnNames="user_id, role_id"
+                       constraintName="pk_user_roles"/>
+
+        <addForeignKeyConstraint baseTableName="user_roles"
+                                 baseColumnNames="user_id"
+                                 referencedTableName="users"
+                                 referencedColumnNames="id"
+                                 constraintName="fk_user_roles_user"
+                                 onDelete="CASCADE"/>
+
+        <addForeignKeyConstraint baseTableName="user_roles"
+                                 baseColumnNames="role_id"
+                                 referencedTableName="roles"
+                                 referencedColumnNames="id"
+                                 constraintName="fk_user_roles_role"
+                                 onDelete="CASCADE"/>
+
+        <insert tableName="roles">
+            <column name="name" value="ROLE_USER"/>
+        </insert>
+
+        <insert tableName="roles">
+            <column name="name" value="ROLE_ADMIN"/>
+        </insert>
+
+        <!-- user profiles -->
+        <createTable tableName="user_profiles">
+            <column name="user_id" type="bigint">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="name" type="varchar(100)"/>
+            <column name="contact_email" type="varchar(255)"/>
+            <column name="picture_url" type="varchar(1000)"/>
+            <column name="description" type="varchar(2000)"/>
+        </createTable>
+
+        <addForeignKeyConstraint baseTableName="user_profiles"
+                                 baseColumnNames="user_id"
+                                 referencedTableName="users"
+                                 referencedColumnNames="id"
+                                 constraintName="fk_user_profiles_user"
+                                 onDelete="CASCADE"/>
+
+        <!-- projects -->
+        <createTable tableName="projects">
+            <column name="id" type="bigint" autoIncrement="true">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="name" type="varchar(150)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="description" type="varchar(5000)"/>
+            <column name="archived" type="boolean" defaultValueBoolean="false">
+                <constraints nullable="false"/>
+            </column>
+            <column name="creator_user_id" type="bigint">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_at" type="timestamp" defaultValueComputed="CURRENT_TIMESTAMP">
+                <constraints nullable="false"/>
+            </column>
+            <column name="updated_at" type="timestamp" defaultValueComputed="CURRENT_TIMESTAMP">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <addForeignKeyConstraint baseTableName="projects"
+                                 baseColumnNames="creator_user_id"
+                                 referencedTableName="users"
+                                 referencedColumnNames="id"
+                                 constraintName="fk_projects_creator_user"/>
+
+        <!-- project members -->
+        <createTable tableName="project_members">
+            <column name="id" type="bigint" autoIncrement="true">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="project_id" type="bigint">
+                <constraints nullable="false"/>
+            </column>
+            <column name="user_id" type="bigint">
+                <constraints nullable="false"/>
+            </column>
+            <column name="role" type="varchar(20)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="joined_at" type="timestamp" defaultValueComputed="CURRENT_TIMESTAMP">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <addUniqueConstraint tableName="project_members"
+                             columnNames="project_id,user_id"
+                             constraintName="uk_project_member"/>
+
+        <addForeignKeyConstraint baseTableName="project_members"
+                                 baseColumnNames="project_id"
+                                 referencedTableName="projects"
+                                 referencedColumnNames="id"
+                                 constraintName="fk_project_members_project"
+                                 onDelete="CASCADE"/>
+
+        <addForeignKeyConstraint baseTableName="project_members"
+                                 baseColumnNames="user_id"
+                                 referencedTableName="users"
+                                 referencedColumnNames="id"
+                                 constraintName="fk_project_members_user"
+                                 onDelete="CASCADE"/>
+
+        <!-- board columns -->
+        <createTable tableName="board_columns">
+            <column name="id" type="bigint" autoIncrement="true">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="project_id" type="bigint">
+                <constraints nullable="false"/>
+            </column>
+            <column name="name" type="varchar(100)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="position" type="int">
+                <constraints nullable="false"/>
+            </column>
+            <column name="type" type="varchar(20)" defaultValue="CUSTOM">
+                <constraints nullable="false"/>
+            </column>
+            <column name="deletable" type="boolean" defaultValueBoolean="true">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <addForeignKeyConstraint baseTableName="board_columns"
+                                 baseColumnNames="project_id"
+                                 referencedTableName="projects"
+                                 referencedColumnNames="id"
+                                 constraintName="fk_board_columns_project"
+                                 onDelete="CASCADE"/>
+
+        <!-- tasks -->
+        <createTable tableName="tasks">
+            <column name="id" type="bigint" autoIncrement="true">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="title" type="varchar(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="description" type="mediumtext"/>
+            <column name="creator_user_id" type="bigint">
+                <constraints nullable="false"/>
+            </column>
+            <column name="project_id" type="bigint">
+                <constraints nullable="false"/>
+            </column>
+            <column name="board_column_id" type="bigint">
+                <constraints nullable="false"/>
+            </column>
+            <column name="priority" type="varchar(20)" defaultValue="MEDIUM">
+                <constraints nullable="false"/>
+            </column>
+            <column name="start_at" type="timestamp"/>
+            <column name="due_date" type="timestamp"/>
+            <column name="location" type="varchar(255)"/>
+            <column name="archived" type="boolean" defaultValueBoolean="false">
+                <constraints nullable="false"/>
+            </column>
+            <column name="estimated_minutes" type="int" defaultValueNumeric="0">
+                <constraints nullable="false"/>
+            </column>
+            <column name="tracked_minutes" type="int" defaultValueNumeric="0">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_at" type="timestamp" defaultValueComputed="CURRENT_TIMESTAMP">
+                <constraints nullable="false"/>
+            </column>
+            <column name="updated_at" type="timestamp" defaultValueComputed="CURRENT_TIMESTAMP">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <addForeignKeyConstraint baseTableName="tasks"
+                                 baseColumnNames="creator_user_id"
+                                 referencedTableName="users"
+                                 referencedColumnNames="id"
+                                 constraintName="fk_creator_user_id"/>
+
+        <addForeignKeyConstraint baseTableName="tasks"
+                                 baseColumnNames="project_id"
+                                 referencedTableName="projects"
+                                 referencedColumnNames="id"
+                                 constraintName="fk_tasks_project"
+                                 onDelete="CASCADE"/>
+
+        <addForeignKeyConstraint baseTableName="tasks"
+                                 baseColumnNames="board_column_id"
+                                 referencedTableName="board_columns"
+                                 referencedColumnNames="id"
+                                 constraintName="fk_tasks_board_column"/>
+
+        <!-- time records -->
+        <createTable tableName="time_records">
+            <column name="id" type="bigint" autoIncrement="true">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="time_start" type="datetime">
+                <constraints nullable="true"/>
+            </column>
+            <column name="time_end" type="datetime">
+                <constraints nullable="true"/>
+            </column>
+            <column name="task_id" type="bigint">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <addForeignKeyConstraint baseTableName="time_records"
+                                 baseColumnNames="task_id"
+                                 referencedTableName="tasks"
+                                 referencedColumnNames="id"
+                                 constraintName="fk_task_id"
+                                 onDelete="CASCADE"
+                                 onUpdate="CASCADE"/>
+
+        <!-- task labels -->
+        <createTable tableName="task_labels">
+            <column name="id" type="bigint" autoIncrement="true">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="project_id" type="bigint">
+                <constraints nullable="false"/>
+            </column>
+            <column name="name" type="varchar(100)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="color" type="varchar(30)"/>
+        </createTable>
+
+        <addUniqueConstraint tableName="task_labels"
+                             columnNames="project_id,name"
+                             constraintName="uk_project_label_name"/>
+
+        <addForeignKeyConstraint baseTableName="task_labels"
+                                 baseColumnNames="project_id"
+                                 referencedTableName="projects"
+                                 referencedColumnNames="id"
+                                 constraintName="fk_task_labels_project"
+                                 onDelete="CASCADE"/>
+
+        <!-- task assignees -->
+        <createTable tableName="task_assignees">
+            <column name="task_id" type="bigint">
+                <constraints nullable="false"/>
+            </column>
+            <column name="user_id" type="bigint">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <addPrimaryKey tableName="task_assignees"
+                       columnNames="task_id,user_id"
+                       constraintName="pk_task_assignees"/>
+
+        <addForeignKeyConstraint baseTableName="task_assignees"
+                                 baseColumnNames="task_id"
+                                 referencedTableName="tasks"
+                                 referencedColumnNames="id"
+                                 constraintName="fk_task_assignees_task"
+                                 onDelete="CASCADE"/>
+
+        <addForeignKeyConstraint baseTableName="task_assignees"
+                                 baseColumnNames="user_id"
+                                 referencedTableName="users"
+                                 referencedColumnNames="id"
+                                 constraintName="fk_task_assignees_user"
+                                 onDelete="CASCADE"/>
+
+        <!-- task labels map -->
+        <createTable tableName="task_labels_map">
+            <column name="task_id" type="bigint">
+                <constraints nullable="false"/>
+            </column>
+            <column name="label_id" type="bigint">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <addPrimaryKey tableName="task_labels_map"
+                       columnNames="task_id,label_id"
+                       constraintName="pk_task_labels_map"/>
+
+        <addForeignKeyConstraint baseTableName="task_labels_map"
+                                 baseColumnNames="task_id"
+                                 referencedTableName="tasks"
+                                 referencedColumnNames="id"
+                                 constraintName="fk_task_labels_map_task"
+                                 onDelete="CASCADE"/>
+
+        <addForeignKeyConstraint baseTableName="task_labels_map"
+                                 baseColumnNames="label_id"
+                                 referencedTableName="task_labels"
+                                 referencedColumnNames="id"
+                                 constraintName="fk_task_labels_map_label"
+                                 onDelete="CASCADE"/>
+
+        <!-- task comments -->
+        <createTable tableName="task_comments">
+            <column name="id" type="bigint" autoIncrement="true">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="task_id" type="bigint">
+                <constraints nullable="false"/>
+            </column>
+            <column name="author_user_id" type="bigint">
+                <constraints nullable="false"/>
+            </column>
+            <column name="content" type="varchar(10000)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_at" type="timestamp" defaultValueComputed="CURRENT_TIMESTAMP">
+                <constraints nullable="false"/>
+            </column>
+            <column name="updated_at" type="timestamp" defaultValueComputed="CURRENT_TIMESTAMP">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <addForeignKeyConstraint baseTableName="task_comments"
+                                 baseColumnNames="task_id"
+                                 referencedTableName="tasks"
+                                 referencedColumnNames="id"
+                                 constraintName="fk_task_comments_task"
+                                 onDelete="CASCADE"/>
+
+        <addForeignKeyConstraint baseTableName="task_comments"
+                                 baseColumnNames="author_user_id"
+                                 referencedTableName="users"
+                                 referencedColumnNames="id"
+                                 constraintName="fk_task_comments_author"/>
+
+        <!-- task attachments -->
+        <createTable tableName="task_attachments">
+            <column name="id" type="bigint" autoIncrement="true">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="task_id" type="bigint">
+                <constraints nullable="false"/>
+            </column>
+            <column name="original_filename" type="varchar(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="storage_path" type="varchar(500)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="file_size_bytes" type="bigint">
+                <constraints nullable="false"/>
+            </column>
+            <column name="content_type" type="varchar(150)"/>
+            <column name="uploaded_at" type="timestamp" defaultValueComputed="CURRENT_TIMESTAMP">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <addForeignKeyConstraint baseTableName="task_attachments"
+                                 baseColumnNames="task_id"
+                                 referencedTableName="tasks"
+                                 referencedColumnNames="id"
+                                 constraintName="fk_task_attachments_task"
+                                 onDelete="CASCADE"/>
+
+        <!-- task subtasks -->
+        <createTable tableName="task_subtasks">
+            <column name="id" type="bigint" autoIncrement="true">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="task_id" type="bigint">
+                <constraints nullable="false"/>
+            </column>
+            <column name="title" type="varchar(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="completed" type="boolean" defaultValueBoolean="false">
+                <constraints nullable="false"/>
+            </column>
+            <column name="position" type="int" defaultValueNumeric="0">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <addForeignKeyConstraint baseTableName="task_subtasks"
+                                 baseColumnNames="task_id"
+                                 referencedTableName="tasks"
+                                 referencedColumnNames="id"
+                                 constraintName="fk_task_subtasks_task"
+                                 onDelete="CASCADE"/>
+
+        <!-- task dependencies -->
+        <createTable tableName="task_dependencies">
+            <column name="id" type="bigint" autoIncrement="true">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="blocking_task_id" type="bigint">
+                <constraints nullable="false"/>
+            </column>
+            <column name="blocked_task_id" type="bigint">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <addUniqueConstraint tableName="task_dependencies"
+                             columnNames="blocking_task_id,blocked_task_id"
+                             constraintName="uk_task_dependency"/>
+
+        <addForeignKeyConstraint baseTableName="task_dependencies"
+                                 baseColumnNames="blocking_task_id"
+                                 referencedTableName="tasks"
+                                 referencedColumnNames="id"
+                                 constraintName="fk_task_dependencies_blocking"
+                                 onDelete="CASCADE"/>
+
+        <addForeignKeyConstraint baseTableName="task_dependencies"
+                                 baseColumnNames="blocked_task_id"
+                                 referencedTableName="tasks"
+                                 referencedColumnNames="id"
+                                 constraintName="fk_task_dependencies_blocked"
+                                 onDelete="CASCADE"/>
+
+        <!-- task activities -->
+        <createTable tableName="task_activities">
+            <column name="id" type="bigint" autoIncrement="true">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="task_id" type="bigint">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_by_user_id" type="bigint"/>
+            <column name="type" type="varchar(40)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="message" type="varchar(4000)"/>
+            <column name="created_at" type="timestamp" defaultValueComputed="CURRENT_TIMESTAMP">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <addForeignKeyConstraint baseTableName="task_activities"
+                                 baseColumnNames="task_id"
+                                 referencedTableName="tasks"
+                                 referencedColumnNames="id"
+                                 constraintName="fk_task_activities_task"
+                                 onDelete="CASCADE"/>
+
+        <addForeignKeyConstraint baseTableName="task_activities"
+                                 baseColumnNames="created_by_user_id"
+                                 referencedTableName="users"
+                                 referencedColumnNames="id"
+                                 constraintName="fk_task_activities_created_by"/>
+
+        <!-- recurrence rules -->
+        <createTable tableName="task_recurrence_rules">
+            <column name="id" type="bigint" autoIncrement="true">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="task_id" type="bigint">
+                <constraints nullable="false"/>
+            </column>
+            <column name="frequency" type="varchar(20)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="interval_value" type="int" defaultValueNumeric="1">
+                <constraints nullable="false"/>
+            </column>
+            <column name="next_execution_at" type="timestamp"/>
+            <column name="active" type="boolean" defaultValueBoolean="true">
+                <constraints nullable="false"/>
+            </column>
+            <column name="custom_cron_expression" type="varchar(500)"/>
+        </createTable>
+
+        <addForeignKeyConstraint baseTableName="task_recurrence_rules"
+                                 baseColumnNames="task_id"
+                                 referencedTableName="tasks"
+                                 referencedColumnNames="id"
+                                 constraintName="fk_task_recurrence_rules_task"
+                                 onDelete="CASCADE"/>
+
+        <!-- task calendar reminders -->
+        <createTable tableName="task_calendar_reminders">
+            <column name="id" type="bigint" autoIncrement="true">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="task_id" type="bigint">
+                <constraints nullable="false"/>
+            </column>
+            <column name="minutes_before" type="int">
+                <constraints nullable="false"/>
+            </column>
+            <column name="action_type" type="varchar(20)" defaultValue="DISPLAY">
+                <constraints nullable="false"/>
+            </column>
+            <column name="message" type="varchar(1000)"/>
+        </createTable>
+
+        <addForeignKeyConstraint baseTableName="task_calendar_reminders"
+                                 baseColumnNames="task_id"
+                                 referencedTableName="tasks"
+                                 referencedColumnNames="id"
+                                 constraintName="fk_task_calendar_reminders_task"
+                                 onDelete="CASCADE"/>
+
+        <!-- task calendar feed tokens -->
+        <createTable tableName="task_calendar_feed_tokens">
+            <column name="id" type="bigint" autoIncrement="true">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="user_id" type="bigint">
+                <constraints nullable="false" unique="true" uniqueConstraintName="uk_task_calendar_feed_tokens_user"/>
+            </column>
+            <column name="token" type="varchar(128)">
+                <constraints nullable="false" unique="true" uniqueConstraintName="uk_task_calendar_feed_tokens_token"/>
+            </column>
+            <column name="created_at" type="timestamp" defaultValueComputed="CURRENT_TIMESTAMP">
+                <constraints nullable="false"/>
+            </column>
+            <column name="updated_at" type="timestamp" defaultValueComputed="CURRENT_TIMESTAMP">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <addForeignKeyConstraint baseTableName="task_calendar_feed_tokens"
+                                 baseColumnNames="user_id"
+                                 referencedTableName="users"
+                                 referencedColumnNames="id"
+                                 constraintName="fk_task_calendar_feed_tokens_user"
+                                 onDelete="CASCADE"/>
+
+        <!-- refresh tokens -->
+        <createTable tableName="refresh_tokens">
+            <column name="id" type="bigint" autoIncrement="true">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="user_id" type="bigint">
+                <constraints nullable="false"/>
+            </column>
+            <column name="token" type="varchar(128)">
+                <constraints nullable="false" unique="true" uniqueConstraintName="uk_refresh_tokens_token"/>
+            </column>
+            <column name="expires_at" type="timestamp">
+                <constraints nullable="false"/>
+            </column>
+            <column name="revoked_at" type="timestamp"/>
+            <column name="created_at" type="timestamp" defaultValueComputed="CURRENT_TIMESTAMP">
+                <constraints nullable="false"/>
+            </column>
+            <column name="updated_at" type="timestamp" defaultValueComputed="CURRENT_TIMESTAMP">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <addForeignKeyConstraint baseTableName="refresh_tokens"
+                                 baseColumnNames="user_id"
+                                 referencedTableName="users"
+                                 referencedColumnNames="id"
+                                 constraintName="fk_refresh_tokens_user"
+                                 onDelete="CASCADE"/>
+
+    </changeSet>
+
+</databaseChangeLog>

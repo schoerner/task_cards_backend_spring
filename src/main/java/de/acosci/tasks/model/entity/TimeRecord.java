@@ -31,8 +31,8 @@ public class TimeRecord {
     @Column(name = "time_end")
     private Date timeEnd;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "task_id")
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "task_id", nullable = false)
     @JsonIgnore
     @OnDelete(action = OnDeleteAction.CASCADE)
     private Task task;

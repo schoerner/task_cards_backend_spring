@@ -37,7 +37,6 @@ class UserProfileTest {
         user1Profile.setPictureUrl("url1");
 
         user1Profile.setUser(user1);
-        user1.setProfile(user1Profile);
     }
 
     @Test
@@ -46,17 +45,23 @@ class UserProfileTest {
         assertEquals(0, userProfileRepository.findAll().size());
 
         assertNull(user1.getId());
+        assertNull(user1Profile.getId());
+
         User insertedUser1 = userRepository.save(user1);
         assertEquals(1, userRepository.findAll().size());
-        assertEquals(1, userProfileRepository.findAll().size());
-        assertNotNull(user1.getId());
-        assertNotNull(user1Profile.getId());
+        assertEquals(0, userProfileRepository.findAll().size());
+        assertNotNull(insertedUser1.getId());
+
+        user1Profile.setUser(insertedUser1);
+        insertedUser1.setProfile(user1Profile);
 
         UserProfile insertedUser1Profile = userProfileRepository.save(user1Profile);
         assertEquals(1, userRepository.findAll().size());
         assertEquals(1, userProfileRepository.findAll().size());
+        assertNotNull(insertedUser1Profile.getId());
+        assertEquals(insertedUser1.getId(), insertedUser1Profile.getId());
 
-        userRepository.delete(user1);
+        userRepository.delete(insertedUser1);
         assertEquals(0, userRepository.findAll().size());
         assertEquals(0, userProfileRepository.findAll().size());
     }

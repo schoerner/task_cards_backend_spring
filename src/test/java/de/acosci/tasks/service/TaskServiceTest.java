@@ -28,6 +28,8 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import de.acosci.tasks.repository.ProjectMemberRepository;
+import static org.mockito.Mockito.times;
 
 import java.time.OffsetDateTime;
 import java.util.Collections;
@@ -61,6 +63,8 @@ class TaskServiceTest {
     private TaskLabelRepository taskLabelRepository;
     @MockitoBean
     private TimeRecordRepository timeRecordRepository;
+    @MockitoBean
+    private ProjectMemberRepository projectMemberRepository;
 
     @Autowired
     private TaskServiceImpl taskService;
@@ -126,6 +130,8 @@ class TaskServiceTest {
         when(timeRecordRepository.findAllByTask_IdOrderByTimeStartDesc(mockTask.getId())).thenReturn(Collections.emptyList());
         when(timeRecordRepository.findFirstByTask_IdAndTimeEndIsNullOrderByTimeStartDesc(mockTask.getId()))
                 .thenReturn(Optional.empty());
+        when(projectMemberRepository.existsByProject_IdAndUser_Id(any(), any())).thenReturn(false);
+        when(userRepository.findById(any())).thenReturn(Optional.empty());
     }
 
     @AfterEach
@@ -366,5 +372,70 @@ class TaskServiceTest {
 
         assertFalse(result.isActive());
         assertTrue(result.getTrackedMinutes() >= 30);
+    }
+
+    @Test
+    void createTask_setsAssignees_whenUsersAreProjectMembers() {
+        User assignee = new User();
+        assignee.setId(2L);
+        assignee.setEmail("member@test.org");
+        assignee.setFirstName("Jane");
+        assignee.setLastName("Doe");
+
+        TaskCreateDTO dto = new TaskCreateDTO();
+        dto.setProjectId(mockProject.getId());
+        dto.setTitle("Task with assignee");
+        dto.setPriority(TaskPriority.MEDIUM);
+        dto.setAssigneeIds(Set.of(assignee.getId()));
+
+        when(projectMemberRepository.existsByProject_IdAndUser_Id(mockProject.getId(), assignee.getId()))
+                .thenReturn(true);
+        when(userRepository.findById(assignee.getId())).thenReturn(Optional.of(assignee));
+        when(taskRepository.save(any(Task.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        TaskResponseDTO created = taskService.createTask(dto);
+
+        assertEquals(1, created.getAssignees().size());
+        assertEquals(assignee.getId(), created.getAssignees().iterator().next().getId());
+        verify(projectMemberRepository).existsByProject_IdAndUser_Id(mockProject.getId(), assignee.getId());
+        verify(userRepository).findById(assignee.getId());
+    }
+
+    @Test
+    void createTask_throws_whenAssigneeIsNotProjectMember() {
+        Long foreignUserId = 999L;
+
+        TaskCreateDTO dto = new TaskCreateDTO();
+        dto.setProjectId(mockProject.getId());
+        dto.setTitle("Task with invalid assignee");
+        dto.setPriority(TaskPriority.MEDIUM);
+        dto.setAssigneeIds(Set.of(foreignUserId));
+
+        when(projectMemberRepository.existsByProject_IdAndUser_Id(mockProject.getId(), foreignUserId))
+                .thenReturn(false);
+
+        assertThrows(IllegalArgumentException.class, () -> taskService.createTask(dto));
+
+        verify(projectMemberRepository).existsByProject_IdAndUser_Id(mockProject.getId(), foreignUserId);
+        verify(userRepository, never()).findById(foreignUserId);
+        verify(taskRepository, never()).save(any(Task.class));
+    }
+
+    @Test
+    void updateTask_throws_whenAssigneeIsNotProjectMember() {
+        Long foreignUserId = 999L;
+
+        TaskUpdateDTO dto = new TaskUpdateDTO();
+        dto.setTitle("Updated");
+        dto.setAssigneeIds(Set.of(foreignUserId));
+
+        when(taskRepository.findById(mockTask.getId())).thenReturn(Optional.of(mockTask));
+        when(projectMemberRepository.existsByProject_IdAndUser_Id(mockProject.getId(), foreignUserId))
+                .thenReturn(false);
+
+        assertThrows(IllegalArgumentException.class, () -> taskService.updateTask(mockTask.getId(), dto));
+
+        verify(projectMemberRepository).existsByProject_IdAndUser_Id(mockProject.getId(), foreignUserId);
+        verify(taskRepository, never()).save(any(Task.class));
     }
 }

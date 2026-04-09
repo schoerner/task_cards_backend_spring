@@ -20,7 +20,6 @@ import org.hibernate.annotations.OnDeleteAction;
 public class UserProfile {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.AUTO)
     @Column(name = "user_id")
     private Long id;
 
