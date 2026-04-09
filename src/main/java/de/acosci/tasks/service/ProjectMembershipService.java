@@ -1,6 +1,7 @@
 package de.acosci.tasks.service;
 
 import de.acosci.tasks.model.dto.ProjectMemberUpdateDTO;
+import de.acosci.tasks.model.dto.UserProfileSummaryDTO;
 import de.acosci.tasks.model.entity.ProjectMember;
 
 import java.util.List;
@@ -11,6 +12,8 @@ import java.util.List;
 public interface ProjectMembershipService {
 
     List<ProjectMember> getProjectMembers(Long projectId);
+
+    List<UserProfileSummaryDTO> searchMemberCandidates(Long projectId, String query);
 
     ProjectMember addMember(Long projectId, ProjectMemberUpdateDTO dto);
 

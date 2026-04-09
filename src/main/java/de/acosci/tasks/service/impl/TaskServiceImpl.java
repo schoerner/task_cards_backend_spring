@@ -1,15 +1,7 @@
 package de.acosci.tasks.service.impl;
 
-import de.acosci.tasks.model.dto.TaskCreateDTO;
-import de.acosci.tasks.model.dto.TaskResponseDTO;
-import de.acosci.tasks.model.dto.TaskUpdateDTO;
-import de.acosci.tasks.model.dto.TimeRecordResponseDTO;
-import de.acosci.tasks.model.entity.BoardColumn;
-import de.acosci.tasks.model.entity.Project;
-import de.acosci.tasks.model.entity.Task;
-import de.acosci.tasks.model.entity.TaskLabel;
-import de.acosci.tasks.model.entity.TimeRecord;
-import de.acosci.tasks.model.entity.User;
+import de.acosci.tasks.model.dto.*;
+import de.acosci.tasks.model.entity.*;
 import de.acosci.tasks.model.mapper.TaskMapper;
 import de.acosci.tasks.repository.BoardColumnRepository;
 import de.acosci.tasks.repository.ProjectRepository;
@@ -47,15 +39,13 @@ public class TaskServiceImpl implements TaskService {
     public List<TaskResponseDTO> getTasksByProject(Long projectId) {
         List<Task> tasks = taskRepository.findAllByProject_IdAndArchivedFalse(projectId);
         tasks.forEach(this::synchronizeTrackedMinutesFromRecords);
-        return tasks.stream()
-                .map(TaskMapper::toResponseDTO)
-                .toList();
+        return tasks.stream().map(TaskMapper::toResponseDTO).toList();
     }
 
     @Override
     @Transactional(readOnly = true)
     public TaskResponseDTO getTaskById(Long taskId) {
-        Task task = requireTask(taskId);
+        Task task = getTaskEntityById(taskId);
         synchronizeTrackedMinutesFromRecords(task);
         return TaskMapper.toResponseDTO(task);
     }
@@ -76,6 +66,9 @@ public class TaskServiceImpl implements TaskService {
         task.setDescription(dto.getDescription());
         task.setPriority(dto.getPriority());
         task.setDueDate(dto.getDueDate());
+        task.setStartAt(dto.getStartAt());
+        task.setLocation(dto.getLocation());
+        applyCalendarReminders(task, dto.getCalendarReminders());
         task.setEstimatedMinutes(dto.getEstimatedMinutes() != null ? dto.getEstimatedMinutes() : 0);
         task.setTrackedMinutes(0);
         task.setAssignees(resolveUsers(dto.getAssigneeIds()));
@@ -85,7 +78,7 @@ public class TaskServiceImpl implements TaskService {
 
     @Override
     public TaskResponseDTO updateTask(Long taskId, TaskUpdateDTO dto) {
-        Task task = requireTask(taskId);
+        Task task = getTaskEntityById(taskId);
         task.setTitle(dto.getTitle());
         task.setDescription(dto.getDescription());
 
@@ -97,17 +90,15 @@ public class TaskServiceImpl implements TaskService {
         }
 
         task.setDueDate(dto.getDueDate());
+        task.setStartAt(dto.getStartAt());
+        task.setLocation(dto.getLocation());
+        applyCalendarReminders(task, dto.getCalendarReminders());
 
         if (dto.getEstimatedMinutes() != null) {
             task.setEstimatedMinutes(dto.getEstimatedMinutes());
         }
 
-        /*
-         * trackedMinutes remains a derived/cache field from time_records.
-         * Do not overwrite it blindly through the generic update endpoint.
-         */
         synchronizeTrackedMinutesFromRecords(task);
-
         task.setArchived(dto.isArchived());
         task.setAssignees(resolveUsers(dto.getAssigneeIds()));
         task.setLabels(resolveLabels(dto.getLabelIds()));
@@ -116,21 +107,21 @@ public class TaskServiceImpl implements TaskService {
 
     @Override
     public TaskResponseDTO moveTask(Long taskId, Long boardColumnId) {
-        Task task = requireTask(taskId);
+        Task task = getTaskEntityById(taskId);
         task.setBoardColumn(resolveBoardColumn(task.getProject().getId(), boardColumnId));
         return TaskMapper.toResponseDTO(taskRepository.save(task));
     }
 
     @Override
     public TaskResponseDTO archiveTask(Long taskId) {
-        Task task = requireTask(taskId);
+        Task task = getTaskEntityById(taskId);
         task.setArchived(true);
         return TaskMapper.toResponseDTO(taskRepository.save(task));
     }
 
     @Override
     public TaskResponseDTO restoreTask(Long taskId) {
-        Task task = requireTask(taskId);
+        Task task = getTaskEntityById(taskId);
         task.setArchived(false);
         return TaskMapper.toResponseDTO(taskRepository.save(task));
     }
@@ -143,18 +134,19 @@ public class TaskServiceImpl implements TaskService {
     @Override
     @Transactional(readOnly = true)
     public List<TimeRecordResponseDTO> getTimeRecords(Long taskId) {
-        requireTask(taskId);
-        return timeRecordRepository.findAllByTask_IdOrderByTimeStartDesc(taskId).stream()
-                .map(TaskMapper::toResponseDTO)
+        getTaskEntityById(taskId);
+        return timeRecordRepository.findAllByTask_IdOrderByTimeStartDesc(taskId)
+                .stream()
+                .map(TaskMapper::toTimeRecordResponseDTO)
                 .toList();
     }
 
     @Override
     @Transactional(readOnly = true)
     public TimeRecordResponseDTO getActiveTimeRecord(Long taskId) {
-        requireTask(taskId);
+        getTaskEntityById(taskId);
         return timeRecordRepository.findFirstByTask_IdAndTimeEndIsNullOrderByTimeStartDesc(taskId)
-                .map(TaskMapper::toResponseDTO)
+                .map(TaskMapper::toTimeRecordResponseDTO)
                 .orElse(null);
     }
 
@@ -166,7 +158,7 @@ public class TaskServiceImpl implements TaskService {
 
     @Override
     public TaskResponseDTO startTimeTracking(Long taskId) {
-        Task task = requireTask(taskId);
+        Task task = getTaskEntityById(taskId);
 
         if (isActive(taskId)) {
             throw new IllegalStateException("Task already has an active time record: " + taskId);
@@ -182,7 +174,7 @@ public class TaskServiceImpl implements TaskService {
 
     @Override
     public TaskResponseDTO stopTimeTracking(Long taskId) {
-        Task task = requireTask(taskId);
+        Task task = getTaskEntityById(taskId);
 
         TimeRecord activeTimeRecord = timeRecordRepository
                 .findFirstByTask_IdAndTimeEndIsNullOrderByTimeStartDesc(taskId)
@@ -195,7 +187,7 @@ public class TaskServiceImpl implements TaskService {
         return TaskMapper.toResponseDTO(taskRepository.save(task));
     }
 
-    private Task requireTask(Long taskId) {
+    private Task getTaskEntityById(Long taskId) {
         return taskRepository.findById(taskId)
                 .orElseThrow(() -> new IllegalArgumentException("Task not found: " + taskId));
     }
@@ -206,8 +198,11 @@ public class TaskServiceImpl implements TaskService {
                     .filter(column -> column.getProject().getId().equals(projectId))
                     .orElseThrow(() -> new IllegalArgumentException("Board column not found: " + boardColumnId));
         }
-        return boardColumnRepository.findByProject_IdAndName(projectId, "Not assigned")
-                .orElseThrow(() -> new IllegalStateException("Mandatory default column 'Not assigned' is missing."));
+        return boardColumnRepository
+                .findFirstByProjectIdAndDeletableFalse(projectId)
+                .orElseGet(() -> boardColumnRepository
+                        .findFirstByProjectIdOrderByPositionAsc(projectId)
+                        .orElseThrow(() -> new IllegalStateException("No board column available for project " + projectId)));
     }
 
     private Set<User> resolveUsers(Set<Long> userIds) {
@@ -233,6 +228,27 @@ public class TaskServiceImpl implements TaskService {
                 })
                 .sum();
         task.setTrackedMinutes(trackedMinutes);
+    }
+
+    private void applyCalendarReminders(Task task, Set<TaskCalendarReminderDTO> reminderDTOs) {
+        task.getCalendarReminders().clear();
+
+        if (reminderDTOs == null || reminderDTOs.isEmpty()) {
+            return;
+        }
+
+        for (TaskCalendarReminderDTO dto : reminderDTOs) {
+            if (dto.getMinutesBefore() == null) {
+                continue;
+            }
+
+            TaskCalendarReminder reminder = new TaskCalendarReminder();
+            reminder.setTask(task);
+            reminder.setMinutesBefore(dto.getMinutesBefore());
+            reminder.setActionType(dto.getActionType() != null ? dto.getActionType() : "DISPLAY");
+            reminder.setMessage(dto.getMessage());
+            task.getCalendarReminders().add(reminder);
+        }
     }
 
     private User getCurrentUser() {

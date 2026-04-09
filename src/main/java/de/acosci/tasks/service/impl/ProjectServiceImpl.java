@@ -25,7 +25,7 @@ import java.util.List;
 @Transactional
 public class ProjectServiceImpl implements ProjectService {
 
-    private static final String DEFAULT_NOT_ASSIGNED_COLUMN_NAME = "Not assigned";
+    private static final String DEFAULT_NOT_ASSIGNED_COLUMN_NAME = "To Do";
 
     private final ProjectRepository projectRepository;
     private final ProjectMemberRepository projectMemberRepository;
@@ -100,7 +100,6 @@ public class ProjectServiceImpl implements ProjectService {
 
     private void initializeDefaultBoardColumns(Project project) {
         project.getBoardColumns().add(createSystemBoardColumn(project, DEFAULT_NOT_ASSIGNED_COLUMN_NAME, 0));
-        project.getBoardColumns().add(createCustomBoardColumn(project, "To Do", 1));
         project.getBoardColumns().add(createCustomBoardColumn(project, "In Progress", 2));
         project.getBoardColumns().add(createCustomBoardColumn(project, "Done", 3));
     }
@@ -117,6 +116,7 @@ public class ProjectServiceImpl implements ProjectService {
         column.setProject(project);
         column.setName(name);
         column.setPosition(position);
+        column.setDeletable(true);
         return column;
     }
 

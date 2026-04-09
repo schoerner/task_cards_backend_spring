@@ -1,15 +1,16 @@
 package de.acosci.tasks.model.enums;
 
+import lombok.Getter;
+
 /**
  * Priority scale from 0 (very low) to 5 (very high).
  */
+@Getter
 public enum TaskPriority {
-    VERY_LOW(0),
-    LOW(1),
-    RATHER_LOW(2),
-    MEDIUM(3),
-    HIGH(4),
-    VERY_HIGH(5);
+    LOW(0),
+    MEDIUM(1),
+    HIGH(2),
+    URGENT(3);
 
     private final int level;
 
@@ -17,7 +18,4 @@ public enum TaskPriority {
         this.level = level;
     }
 
-    public int getLevel() {
-        return level;
-    }
 }

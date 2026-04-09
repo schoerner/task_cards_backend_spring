@@ -7,7 +7,8 @@ import java.util.Date;
 @Data
 public class TimeRecordResponseDTO {
     private Long id;
+    private Long taskId;
     private Date timeStart;
     private Date timeEnd;
-    private Long taskId;
+    private boolean active;
 }

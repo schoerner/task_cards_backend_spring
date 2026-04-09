@@ -3,5 +3,6 @@
 
     <include file="version-1.0-tasks-users-task_records.xml" relativeToChangelogFile="true" />
     <include file="version-2.0-project-board-task-model.xml" relativeToChangelogFile="true" />
+    <include file="version-3.0-task-calendar.xml" relativeToChangelogFile="true" />
 
 </databaseChangeLog>

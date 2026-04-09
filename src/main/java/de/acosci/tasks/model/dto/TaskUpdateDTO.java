@@ -22,10 +22,13 @@ public class TaskUpdateDTO {
 
     private Long boardColumnId;
     private TaskPriority priority;
+    private OffsetDateTime startAt;
     private OffsetDateTime dueDate;
+    private String location;
     private Integer estimatedMinutes;
     private Integer trackedMinutes;
     private boolean archived;
+    private Set<TaskCalendarReminderDTO> calendarReminders;
     private Set<Long> assigneeIds;
     private Set<Long> labelIds;
 }

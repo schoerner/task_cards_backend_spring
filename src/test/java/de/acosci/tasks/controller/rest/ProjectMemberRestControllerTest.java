@@ -3,6 +3,7 @@ package de.acosci.tasks.controller.rest;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import de.acosci.tasks.common.config.JwtAuthenticationFilter;
 import de.acosci.tasks.model.dto.ProjectMemberUpdateDTO;
+import de.acosci.tasks.model.dto.UserProfileSummaryDTO;
 import de.acosci.tasks.model.entity.Project;
 import de.acosci.tasks.model.entity.ProjectMember;
 import de.acosci.tasks.model.entity.User;
@@ -104,6 +105,24 @@ class ProjectMemberRestControllerTest {
                 .andExpect(jsonPath("$[0].userId").value(1))
                 .andExpect(jsonPath("$[0].email").value("admin@example.com"))
                 .andExpect(jsonPath("$[0].role").value("OWNER"));
+    }
+
+    @Test
+    void searchMemberCandidates_returnsOk() throws Exception {
+        UserProfileSummaryDTO candidate = new UserProfileSummaryDTO();
+        candidate.setUserId(5L);
+        candidate.setName("Mia Musterfrau");
+        candidate.setContactEmail("mia@example.org");
+
+        when(projectSecurity.canManageMembersByEmail(eq(2L), any())).thenReturn(true);
+        when(projectMembershipService.searchMemberCandidates(2L, "mia")).thenReturn(List.of(candidate));
+
+        mockMvc.perform(get("/api/v1/projects/2/members/candidates")
+                        .param("query", "mia")
+                        .with(user("owner@example.com").roles("USER")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].userId").value(5))
+                .andExpect(jsonPath("$[0].name").value("Mia Musterfrau"));
     }
 
     @Test

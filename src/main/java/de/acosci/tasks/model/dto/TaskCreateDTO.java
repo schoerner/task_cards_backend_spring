@@ -28,7 +28,10 @@ public class TaskCreateDTO {
 
     private TaskPriority priority = TaskPriority.MEDIUM;
     private OffsetDateTime dueDate;
+    private OffsetDateTime startAt;
     private Integer estimatedMinutes = 0;
+    private String location;
+    private Set<TaskCalendarReminderDTO> calendarReminders;
     private Set<Long> assigneeIds;
     private Set<Long> labelIds;
 }

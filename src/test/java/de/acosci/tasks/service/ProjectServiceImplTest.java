@@ -77,16 +77,15 @@ class ProjectServiceImplTest {
         Project created = projectService.createProject(dto);
 
         assertNotNull(created);
-        assertEquals(4, created.getBoardColumns().size());
+        assertEquals(3, created.getBoardColumns().size());
 
         var columns = created.getBoardColumns().stream().toList();
-        assertEquals("Not assigned", columns.get(0).getName());
+        assertEquals("To Do", columns.get(0).getName());
         assertEquals(BoardColumnType.SYSTEM, columns.get(0).getType());
         assertFalse(columns.get(0).isDeletable());
 
-        assertEquals("To Do", columns.get(1).getName());
-        assertEquals("In Progress", columns.get(2).getName());
-        assertEquals("Done", columns.get(3).getName());
+        assertEquals("In Progress", columns.get(1).getName());
+        assertEquals("Done", columns.get(2).getName());
         assertTrue(columns.stream().allMatch(column -> column.getProject() == created));
     }
 }

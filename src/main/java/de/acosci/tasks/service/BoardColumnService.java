@@ -13,5 +13,6 @@ public interface BoardColumnService {
     List<BoardColumn> getBoardColumns(Long projectId);
     BoardColumn createColumn(Long projectId, BoardColumnCreateDTO dto);
     BoardColumn updateColumn(Long projectId, Long columnId, BoardColumnUpdateDTO dto);
+    List<BoardColumn> reorderColumns(Long projectId, List<Long> orderedColumnIds);
     void deleteColumn(Long projectId, Long columnId, Long fallbackColumnId);
 }

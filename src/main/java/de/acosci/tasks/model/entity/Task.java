@@ -49,7 +49,15 @@ public class Task {
     @Column(nullable = false, length = 20)
     private TaskPriority priority = TaskPriority.MEDIUM;
 
+    private OffsetDateTime startAt;
     private OffsetDateTime dueDate;
+
+    @Column(length = 255)
+    private String location;
+
+    @JsonIgnore
+    @OneToMany(mappedBy = "task", cascade = CascadeType.ALL, orphanRemoval = true)
+    private Set<TaskCalendarReminder> calendarReminders = new LinkedHashSet<>();
 
     @Column(nullable = false)
     private boolean archived = false;

@@ -3,6 +3,7 @@ package de.acosci.tasks.controller.rest;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import de.acosci.tasks.common.config.JwtAuthenticationFilter;
 import de.acosci.tasks.model.dto.BoardColumnCreateDTO;
+import de.acosci.tasks.model.dto.BoardColumnReorderDTO;
 import de.acosci.tasks.model.dto.BoardColumnUpdateDTO;
 import de.acosci.tasks.model.entity.BoardColumn;
 import de.acosci.tasks.model.entity.Project;
@@ -34,6 +35,7 @@ import static org.mockito.Mockito.when;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -129,6 +131,30 @@ class BoardColumnRestControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.name").value("Review"))
                 .andExpect(jsonPath("$.position").value(5));
+    }
+
+    @Test
+    void reorderColumns_returnsOk() throws Exception {
+        BoardColumnReorderDTO dto = new BoardColumnReorderDTO();
+        dto.setOrderedColumnIds(List.of(11L, 10L));
+
+        BoardColumn left = customColumn();
+        left.setPosition(0);
+        BoardColumn right = sampleColumn();
+        right.setPosition(1);
+
+        when(projectSecurity.canManageBoardByEmail(eq(2L), any())).thenReturn(true);
+        when(boardColumnService.reorderColumns(eq(2L), eq(List.of(11L, 10L)))).thenReturn(List.of(left, right));
+
+        mockMvc.perform(patch("/api/v1/projects/2/board-columns/reorder")
+                        .with(user("owner@test.de").roles("USER"))
+                        .contentType("application/json")
+                        .content(objectMapper.writeValueAsString(dto)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].id").value(11))
+                .andExpect(jsonPath("$[0].position").value(0))
+                .andExpect(jsonPath("$[1].id").value(10))
+                .andExpect(jsonPath("$[1].position").value(1));
     }
 
     @Test

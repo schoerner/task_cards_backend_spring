@@ -2,6 +2,7 @@ package de.acosci.tasks.controller.rest;
 
 import de.acosci.tasks.model.dto.ProjectMemberResponseDTO;
 import de.acosci.tasks.model.dto.ProjectMemberUpdateDTO;
+import de.acosci.tasks.model.dto.UserProfileSummaryDTO;
 import de.acosci.tasks.model.entity.ProjectMember;
 import de.acosci.tasks.model.mapper.ProjectMemberMapper;
 import de.acosci.tasks.service.ProjectMembershipService;
@@ -34,6 +35,16 @@ public class ProjectMemberRestController {
                 .toList();
 
         return ResponseEntity.ok(result);
+    }
+
+    @GetMapping("/candidates")
+    @PreAuthorize("hasRole('ADMIN') or @projectSecurity.canManageMembersByEmail(#projectId, authentication.name)")
+    @Operation(summary = "Search member candidates by profile name or contact email")
+    public ResponseEntity<List<UserProfileSummaryDTO>> searchMemberCandidates(
+            @PathVariable Long projectId,
+            @RequestParam(required = false) String query
+    ) {
+        return ResponseEntity.ok(projectMembershipService.searchMemberCandidates(projectId, query));
     }
 
     @PostMapping

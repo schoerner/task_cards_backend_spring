@@ -1,6 +1,7 @@
 package de.acosci.tasks.model.mapper;
 
 import de.acosci.tasks.model.dto.UserProfileResponseDTO;
+import de.acosci.tasks.model.dto.UserProfileSummaryDTO;
 import de.acosci.tasks.model.dto.UserResponseDTO;
 import de.acosci.tasks.model.entity.Role;
 import de.acosci.tasks.model.entity.User;
@@ -51,6 +52,19 @@ public final class UserMapper {
         dto.setContactEmail(profile.getContactEmail());
         dto.setPictureUrl(profile.getPictureUrl());
         dto.setDescription(profile.getDescription());
+        return dto;
+    }
+
+    public static UserProfileSummaryDTO toUserProfileSummaryDTO(UserProfile profile) {
+        if (profile == null) {
+            return null;
+        }
+
+        UserProfileSummaryDTO dto = new UserProfileSummaryDTO();
+        dto.setUserId(profile.getId());
+        dto.setName(profile.getName());
+        dto.setContactEmail(profile.getContactEmail());
+        dto.setPictureUrl(profile.getPictureUrl());
         return dto;
     }
 }

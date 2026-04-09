@@ -1,6 +1,7 @@
 package de.acosci.tasks.controller.rest;
 
 import de.acosci.tasks.model.dto.BoardColumnCreateDTO;
+import de.acosci.tasks.model.dto.BoardColumnReorderDTO;
 import de.acosci.tasks.model.dto.BoardColumnResponseDTO;
 import de.acosci.tasks.model.dto.BoardColumnUpdateDTO;
 import de.acosci.tasks.model.entity.BoardColumn;
@@ -53,6 +54,18 @@ public class BoardColumnRestController {
                                                                @Valid @RequestBody BoardColumnUpdateDTO dto) {
         BoardColumn column = boardColumnService.updateColumn(projectId, columnId, dto);
         return ResponseEntity.ok(BoardColumnMapper.toResponseDTO(column));
+    }
+
+    @Operation(summary = "Kanban-Spalten atomar neu anordnen")
+    @PatchMapping("/reorder")
+    @PreAuthorize("hasRole('ADMIN') or @projectSecurity.canManageBoardByEmail(#projectId, authentication.name)")
+    public ResponseEntity<List<BoardColumnResponseDTO>> reorderColumns(@PathVariable Long projectId,
+                                                                       @Valid @RequestBody BoardColumnReorderDTO dto) {
+        List<BoardColumnResponseDTO> result = boardColumnService.reorderColumns(projectId, dto.getOrderedColumnIds())
+                .stream()
+                .map(BoardColumnMapper::toResponseDTO)
+                .toList();
+        return ResponseEntity.ok(result);
     }
 
     @Operation(summary = "Kanban-Spalte löschen")

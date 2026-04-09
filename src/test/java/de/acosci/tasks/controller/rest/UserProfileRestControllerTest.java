@@ -3,6 +3,7 @@ package de.acosci.tasks.controller.rest;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import de.acosci.tasks.common.config.JwtAuthenticationFilter;
 import de.acosci.tasks.model.dto.UserProfileResponseDTO;
+import de.acosci.tasks.model.dto.UserProfileSummaryDTO;
 import de.acosci.tasks.model.dto.UserProfileUpdateDTO;
 import de.acosci.tasks.service.UserProfileService;
 import org.junit.jupiter.api.Test;
@@ -21,11 +22,14 @@ import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
+import java.util.List;
+
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @WebMvcTest(
@@ -92,5 +96,38 @@ class UserProfileRestControllerTest {
                         .contentType("application/json")
                         .content(objectMapper.writeValueAsString(dto)))
                 .andExpect(status().isOk());
+    }
+
+    @Test
+    void searchProfiles_returnsOk() throws Exception {
+        UserProfileSummaryDTO profile = new UserProfileSummaryDTO();
+        profile.setUserId(7L);
+        profile.setName("Mia Musterfrau");
+        profile.setContactEmail("mia@example.org");
+
+        when(userProfileService.searchProfiles("mia")).thenReturn(List.of(profile));
+
+        mockMvc.perform(get("/api/v1/user-profiles")
+                        .param("query", "mia")
+                        .with(user("user@test.de").roles("USER")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].userId").value(7))
+                .andExpect(jsonPath("$[0].name").value("Mia Musterfrau"));
+    }
+
+    @Test
+    void getProfileByUserId_returnsOk() throws Exception {
+        UserProfileResponseDTO response = new UserProfileResponseDTO();
+        response.setUserId(7L);
+        response.setName("Mia Musterfrau");
+        response.setContactEmail("mia@example.org");
+
+        when(userProfileService.getProfileByUserId(7L)).thenReturn(response);
+
+        mockMvc.perform(get("/api/v1/user-profiles/7")
+                        .with(user("user@test.de").roles("USER")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.userId").value(7))
+                .andExpect(jsonPath("$.name").value("Mia Musterfrau"));
     }
 }

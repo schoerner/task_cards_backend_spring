@@ -13,7 +13,9 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 @Service
 @RequiredArgsConstructor
@@ -47,6 +49,33 @@ public class BoardColumnServiceImpl implements BoardColumnService {
         column.setName(dto.getName());
         column.setPosition(dto.getPosition());
         return boardColumnRepository.save(column);
+    }
+
+    @Override
+    public List<BoardColumn> reorderColumns(Long projectId, List<Long> orderedColumnIds) {
+        List<BoardColumn> existingColumns = boardColumnRepository.findAllByProject_IdOrderByPositionAsc(projectId);
+        if (existingColumns.isEmpty()) {
+            throw new IllegalArgumentException("No board columns found for project: " + projectId);
+        }
+
+        Set<Long> existingIds = existingColumns.stream().map(BoardColumn::getId).collect(java.util.stream.Collectors.toSet());
+        Set<Long> requestedIds = new HashSet<>(orderedColumnIds);
+
+        if (orderedColumnIds.size() != existingColumns.size() || requestedIds.size() != existingColumns.size() || !existingIds.equals(requestedIds)) {
+            throw new IllegalArgumentException("orderedColumnIds must contain each project board column exactly once.");
+        }
+
+        for (int index = 0; index < orderedColumnIds.size(); index++) {
+            Long columnId = orderedColumnIds.get(index);
+            BoardColumn column = existingColumns.stream()
+                    .filter(it -> it.getId().equals(columnId))
+                    .findFirst()
+                    .orElseThrow(() -> new IllegalArgumentException("Board column not found: " + columnId));
+            column.setPosition(index);
+        }
+
+        boardColumnRepository.saveAll(existingColumns);
+        return boardColumnRepository.findAllByProject_IdOrderByPositionAsc(projectId);
     }
 
     @Override

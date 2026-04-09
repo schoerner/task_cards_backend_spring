@@ -9,4 +9,6 @@ import java.util.Optional;
 public interface BoardColumnRepository extends JpaRepository<BoardColumn, Long> {
     List<BoardColumn> findAllByProject_IdOrderByPositionAsc(Long projectId);
     Optional<BoardColumn> findByProject_IdAndName(Long projectId, String name);
+    Optional<BoardColumn> findFirstByProjectIdAndDeletableFalse(Long projectId);
+    Optional<BoardColumn> findFirstByProjectIdOrderByPositionAsc(Long projectId);
 }
