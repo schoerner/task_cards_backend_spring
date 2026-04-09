@@ -1,9 +1,6 @@
 package de.acosci.tasks.controller.rest;
 
-import de.acosci.tasks.model.dto.LoginResponseDTO;
-import de.acosci.tasks.model.dto.LoginUserDTO;
-import de.acosci.tasks.model.dto.RegisterUserDTO;
-import de.acosci.tasks.model.dto.UserResponseDTO;
+import de.acosci.tasks.model.dto.*;
 import de.acosci.tasks.model.entity.User;
 import de.acosci.tasks.model.mapper.UserMapper;
 import de.acosci.tasks.service.impl.AuthenticationService;
@@ -76,19 +73,20 @@ public class AuthenticationRestController {
             @ApiResponse(responseCode = "401", description = "Ungültige Anmeldedaten", content = @Content)
     })
     @PostMapping("/login")
-    public ResponseEntity<LoginResponseDTO> authenticate(
-            @io.swagger.v3.oas.annotations.parameters.RequestBody(
-                    description = "Anmeldedaten des Benutzers",
-                    required = true,
-                    content = @Content(schema = @Schema(implementation = LoginUserDTO.class))
-            )
-            @RequestBody LoginUserDTO loginUserDto) {
-        User authenticatedUser = authenticationService.authenticate(loginUserDto);
-
-        String jwtToken = jwtService.generateToken(authenticatedUser);
-
-        LoginResponseDTO loginResponse = new LoginResponseDTO(jwtToken, jwtService.getExpirationTime());
-
+    public ResponseEntity<LoginResponseDTO> authenticate(@RequestBody LoginUserDTO loginUserDto) {
+        LoginResponseDTO loginResponse = authenticationService.login(loginUserDto, jwtService);
         return ResponseEntity.ok(loginResponse);
+    }
+
+    @PostMapping("/refresh")
+    public ResponseEntity<LoginResponseDTO> refresh(@RequestBody RefreshTokenRequestDTO requestDto) {
+        LoginResponseDTO loginResponse = authenticationService.refresh(requestDto.refreshToken(), jwtService);
+        return ResponseEntity.ok(loginResponse);
+    }
+
+    @PostMapping("/logout")
+    public ResponseEntity<Void> logout(@RequestBody LogoutRequestDTO requestDto) {
+        authenticationService.logout(requestDto.refreshToken());
+        return ResponseEntity.noContent().build();
     }
 }

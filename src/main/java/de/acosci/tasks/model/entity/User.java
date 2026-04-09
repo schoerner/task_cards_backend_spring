@@ -97,6 +97,10 @@ public class User implements UserDetails {
         return email;
     }
 
+    @JsonIgnore
+    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
+    private Set<RefreshToken> refreshTokens = new HashSet<>();
+
     @Override
     @JsonIgnore
     public boolean isAccountNonExpired() {
