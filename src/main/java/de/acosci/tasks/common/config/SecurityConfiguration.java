@@ -69,6 +69,7 @@ public class SecurityConfiguration {
         CorsConfiguration configuration = new CorsConfiguration();
         configuration.setAllowedOrigins(List.of(
                 "https://task.acosci.de",
+                "http://task.localhost",
                 "http://localhost:5173",
                 "http://localhost",
                 "http://localhost:3000"

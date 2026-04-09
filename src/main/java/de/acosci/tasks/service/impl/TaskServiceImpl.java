@@ -3,12 +3,7 @@ package de.acosci.tasks.service.impl;
 import de.acosci.tasks.model.dto.*;
 import de.acosci.tasks.model.entity.*;
 import de.acosci.tasks.model.mapper.TaskMapper;
-import de.acosci.tasks.repository.BoardColumnRepository;
-import de.acosci.tasks.repository.ProjectRepository;
-import de.acosci.tasks.repository.TaskLabelRepository;
-import de.acosci.tasks.repository.TaskRepository;
-import de.acosci.tasks.repository.TimeRecordRepository;
-import de.acosci.tasks.repository.UserRepository;
+import de.acosci.tasks.repository.*;
 import de.acosci.tasks.service.TaskService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.Authentication;
@@ -33,6 +28,7 @@ public class TaskServiceImpl implements TaskService {
     private final UserRepository userRepository;
     private final TaskLabelRepository taskLabelRepository;
     private final TimeRecordRepository timeRecordRepository;
+    private final ProjectMemberRepository projectMemberRepository;
 
     @Override
     @Transactional(readOnly = true)
@@ -71,9 +67,30 @@ public class TaskServiceImpl implements TaskService {
         applyCalendarReminders(task, dto.getCalendarReminders());
         task.setEstimatedMinutes(dto.getEstimatedMinutes() != null ? dto.getEstimatedMinutes() : 0);
         task.setTrackedMinutes(0);
-        task.setAssignees(resolveUsers(dto.getAssigneeIds()));
+        task.setAssignees(resolveProjectMembers(project.getId(), dto.getAssigneeIds()));
         task.setLabels(resolveLabels(dto.getLabelIds()));
         return TaskMapper.toResponseDTO(taskRepository.save(task));
+    }
+
+    private Set<User> resolveProjectMembers(Long projectId, Set<Long> userIds) {
+        if (userIds == null || userIds.isEmpty()) {
+            return new LinkedHashSet<>();
+        }
+
+        Set<User> users = new LinkedHashSet<>();
+
+        for (Long userId : userIds) {
+            boolean isProjectMember = projectMemberRepository.existsByProject_IdAndUser_Id(projectId, userId);
+            if (!isProjectMember) {
+                throw new IllegalArgumentException("User is not a member of project: " + userId);
+            }
+
+            User user = userRepository.findById(userId)
+                    .orElseThrow(() -> new IllegalArgumentException("User not found: " + userId));
+            users.add(user);
+        }
+
+        return users;
     }
 
     @Override
@@ -100,7 +117,7 @@ public class TaskServiceImpl implements TaskService {
 
         synchronizeTrackedMinutesFromRecords(task);
         task.setArchived(dto.isArchived());
-        task.setAssignees(resolveUsers(dto.getAssigneeIds()));
+        task.setAssignees(resolveProjectMembers(task.getProject().getId(), dto.getAssigneeIds()));
         task.setLabels(resolveLabels(dto.getLabelIds()));
         return TaskMapper.toResponseDTO(taskRepository.save(task));
     }

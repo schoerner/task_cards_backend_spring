@@ -48,7 +48,7 @@ public class User implements UserDetails {
     private String lastName;
 
     @JsonIgnore
-    @OneToOne(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
+    @OneToOne(mappedBy = "user", orphanRemoval = true, fetch = FetchType.LAZY)
     private UserProfile profile;
 
     @JsonIgnore
