@@ -7,6 +7,7 @@ import de.acosci.tasks.repository.RoleRepository;
 import de.acosci.tasks.repository.UserRepository;
 import de.acosci.tasks.service.UserService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.stereotype.Component;
 
@@ -23,36 +24,49 @@ public class InitialDataLoader implements CommandLineRunner {
     private final UserService userService;
     private final AdminConfig adminConfig;
 
+    @Value("${app.initial-data.enabled:true}")
+    private boolean initialDataEnabled;
+
     @Override
     public void run(String... args) {
+        if (!initialDataEnabled) {
+            System.out.println("ℹ️ InitialDataLoader disabled");
+            return;
+        }
+
         createRoleIfNotExists(Role.RoleName.ROLE_USER);
         createRoleIfNotExists(Role.RoleName.ROLE_ADMIN);
+
+        boolean adminExists = userRepository.existsByRoles_Name(Role.RoleName.ROLE_ADMIN);
+        if (adminExists) {
+            System.out.println("ℹ️ Admin user already exists");
+            return;
+        }
 
         String adminEmail = adminConfig.getEmail();
         String adminPassword = adminConfig.getPassword();
 
-        if (userRepository.findByEmail(adminEmail).isEmpty()) {
-            User admin = new User();
-            admin.setEmail(adminEmail);
-            admin.setPassword(adminPassword);
-            admin.setFirstName("System");
-            admin.setLastName("Admin");
-            admin.setRegistration(new Date());
+        Role adminRole = roleRepository.findByName(Role.RoleName.ROLE_ADMIN).orElseThrow(
+                () -> new RuntimeException("Role ROLE_ADMIN not found")
+        );
+        Role userRole = roleRepository.findByName(Role.RoleName.ROLE_USER).orElseThrow(
+                () -> new RuntimeException("Role ROLE_USER not found")
+        );
 
-            Set<Role> roles = new HashSet<>();
-            roles.add(roleRepository.findByName(Role.RoleName.ROLE_ADMIN).orElseThrow(
-                    () -> new RuntimeException("Role not found")
-            ));
-            roles.add(roleRepository.findByName(Role.RoleName.ROLE_USER).orElseThrow(
-                    () -> new RuntimeException("Role not found")
-            ));
-            admin.setRoles(roles);
+        User admin = new User();
+        admin.setEmail(adminEmail);
+        admin.setPassword(adminPassword);
+        admin.setFirstName("System");
+        admin.setLastName("Admin");
+        admin.setRegistration(new Date());
 
-            userService.saveUser(admin);
-            System.out.printf("✅ Admin user created: %s / %s%n", adminEmail, adminPassword);
-        } else {
-            System.out.println("ℹ️ Admin user already exists");
-        }
+        Set<Role> roles = new HashSet<>();
+        roles.add(adminRole);
+        roles.add(userRole);
+        admin.setRoles(roles);
+
+        userService.saveUser(admin);
+        System.out.printf("✅ Default admin user created: %s / %s%n", adminEmail, adminPassword);
     }
 
     private void createRoleIfNotExists(Role.RoleName roleName) {
