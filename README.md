@@ -1,7 +1,7 @@
 # Task Card App - Backend
 
 ## Requirements
-- Java JDK
+- Java JDK (Eclipse Temurin 21)
 - Maven
 - Docker to run docker compose with all services (see readme in the repository of the frontend)
 
