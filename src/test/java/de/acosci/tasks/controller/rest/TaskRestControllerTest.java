@@ -8,6 +8,9 @@ import de.acosci.tasks.model.dto.TaskResponseDTO;
 import de.acosci.tasks.model.dto.TimeRecordResponseDTO;
 import de.acosci.tasks.model.enums.TaskPriority;
 import de.acosci.tasks.service.TaskService;
+import de.acosci.tasks.model.dto.TaskMoveBetweenColumnsDTO;
+import de.acosci.tasks.model.dto.TaskOrderUpdateDTO;
+
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
@@ -39,6 +42,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import static org.mockito.Mockito.doNothing;
 
 @WebMvcTest(
         controllers = TaskRestController.class,
@@ -123,19 +127,23 @@ class TaskRestControllerTest {
                 .andExpect(jsonPath("$.calendarReminders[0].actionType").value("DISPLAY"));
     }
 
-    @Test
-    void moveTask_returnsMovedTaskDto() throws Exception {
-        when(taskSecurity.canEditTaskByEmail(eq(5L), any())).thenReturn(true);
-        TaskResponseDTO moved = sampleTask();
-        moved.setBoardColumnId(11L);
-        when(taskService.moveTask(5L, 11L)).thenReturn(moved);
 
-        mockMvc.perform(patch("/api/v1/tasks/5/move")
-                        .param("boardColumnId", "11")
+
+    @Test
+    void setFavorite_returnsUpdatedTaskDto() throws Exception {
+        when(taskSecurity.canViewTaskByEmail(eq(5L), any())).thenReturn(true);
+
+        TaskResponseDTO favoriteTask = sampleTask();
+        favoriteTask.setFavorite(true);
+
+        when(taskService.setFavorite(5L, true)).thenReturn(favoriteTask);
+
+        mockMvc.perform(patch("/api/v1/tasks/5/favorite")
+                        .param("favorite", "true")
                         .with(user("user@test.de").roles("USER")))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(5))
-                .andExpect(jsonPath("$.boardColumnId").value(11));
+                .andExpect(jsonPath("$.favorite").value(true));
     }
 
     @Test
@@ -201,6 +209,8 @@ class TaskRestControllerTest {
         dto.setId(5L);
         dto.setProjectId(1L);
         dto.setBoardColumnId(10L);
+        dto.setPosition(0);
+        dto.setFavorite(false);
         dto.setTitle("Task");
         dto.setPriority(TaskPriority.MEDIUM);
         dto.setEstimatedMinutes(0);
@@ -219,5 +229,44 @@ class TaskRestControllerTest {
         dto.setCalendarReminders(reminders);
 
         return dto;
+    }
+
+    @Test
+    void reorderTasksInColumn_returnsNoContent() throws Exception {
+        when(projectSecurity.canEditTasksByEmail(eq(1L), any())).thenReturn(true);
+        doNothing().when(taskService).reorderTasksInColumn(eq(1L), eq(10L), eq(List.of(5L, 8L, 9L)));
+
+        TaskOrderUpdateDTO dto = new TaskOrderUpdateDTO();
+        dto.setTaskIds(List.of(5L, 8L, 9L));
+
+        mockMvc.perform(patch("/api/v1/projects/1/board-columns/10/task-order")
+                        .with(user("user@test.de").roles("USER"))
+                        .contentType("application/json")
+                        .content(objectMapper.writeValueAsString(dto)))
+                .andExpect(status().isNoContent());
+    }
+
+    @Test
+    void moveTaskBetweenColumns_returnsNoContent() throws Exception {
+        when(projectSecurity.canEditTasksByEmail(eq(1L), any())).thenReturn(true);
+        doNothing().when(taskService).moveTaskBetweenColumns(
+                eq(1L),
+                eq(10L),
+                eq(11L),
+                eq(List.of(8L, 9L)),
+                eq(List.of(5L, 12L))
+        );
+
+        TaskMoveBetweenColumnsDTO dto = new TaskMoveBetweenColumnsDTO();
+        dto.setSourceColumnId(10L);
+        dto.setTargetColumnId(11L);
+        dto.setSourceTaskIds(List.of(8L, 9L));
+        dto.setTargetTaskIds(List.of(5L, 12L));
+
+        mockMvc.perform(patch("/api/v1/projects/1/task-order/move-between-columns")
+                        .with(user("user@test.de").roles("USER"))
+                        .contentType("application/json")
+                        .content(objectMapper.writeValueAsString(dto)))
+                .andExpect(status().isNoContent());
     }
 }

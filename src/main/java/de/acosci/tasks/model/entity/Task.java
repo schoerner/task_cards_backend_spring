@@ -41,6 +41,9 @@ public class Task {
     @JoinColumn(name = "board_column_id", nullable = false)
     private BoardColumn boardColumn;
 
+    @Column(nullable = false)
+    private Integer position = 0;
+
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "creator_user_id", nullable = false)
     private User creator;

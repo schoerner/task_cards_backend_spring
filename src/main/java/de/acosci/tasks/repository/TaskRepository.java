@@ -7,8 +7,13 @@ import org.springframework.data.jpa.repository.Query;
 import java.util.List;
 
 public interface TaskRepository extends JpaRepository<Task, Long> {
+
     List<Task> findAllByProject_IdAndArchivedFalse(Long projectId);
+
     List<Task> findAllByProject_IdAndBoardColumn_IdAndArchivedFalse(Long projectId, Long boardColumnId);
+
+    List<Task> findAllByProject_IdAndBoardColumn_IdAndArchivedFalseOrderByPositionAscIdAsc(Long projectId, Long boardColumnId);
+
     List<Task> findAllByAssignees_IdAndArchivedFalse(Long assigneeUserId);
 
     @Query("""

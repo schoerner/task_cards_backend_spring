@@ -13,4 +13,8 @@ public interface TimeRecordRepository extends JpaRepository<TimeRecord, Long> {
     List<TimeRecord> findAllByTask_IdOrderByTimeStartDesc(Long taskId);
 
     Optional<TimeRecord> findFirstByTask_IdAndTimeEndIsNullOrderByTimeStartDesc(Long taskId);
+
+    Optional<TimeRecord> findFirstByTask_IdAndUser_IdAndTimeEndIsNullOrderByTimeStartDesc(Long taskId, Long userId);
+
+    Optional<TimeRecord> findFirstByUser_IdAndTimeEndIsNullOrderByTimeStartDesc(Long userId);
 }

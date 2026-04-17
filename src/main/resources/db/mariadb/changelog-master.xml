@@ -4,5 +4,6 @@
                                        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
 
     <include file="version-0.1-initial-schema.xml" relativeToChangelogFile="true" />
+    <include file="db/mariadb/version-0.2-task-ordering-favorites-time-record-user.xml"/>
 
 </databaseChangeLog>

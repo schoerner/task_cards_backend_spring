@@ -1,9 +1,6 @@
 package de.acosci.tasks.controller.rest;
 
-import de.acosci.tasks.model.dto.TaskCreateDTO;
-import de.acosci.tasks.model.dto.TaskResponseDTO;
-import de.acosci.tasks.model.dto.TaskUpdateDTO;
-import de.acosci.tasks.model.dto.TimeRecordResponseDTO;
+import de.acosci.tasks.model.dto.*;
 import de.acosci.tasks.service.TaskService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -51,11 +48,40 @@ public class TaskRestController {
         return ResponseEntity.ok(taskService.updateTask(taskId, dto));
     }
 
-    @Operation(summary = "Task auf dem Kanban-Board verschieben")
-    @PatchMapping("/api/v1/tasks/{taskId}/move")
-    @PreAuthorize("hasRole('ADMIN') or @taskSecurity.canEditTaskByEmail(#taskId, authentication.name)")
-    public ResponseEntity<TaskResponseDTO> moveTask(@PathVariable Long taskId, @RequestParam Long boardColumnId) {
-        return ResponseEntity.ok(taskService.moveTask(taskId, boardColumnId));
+    @PatchMapping("/api/v1/projects/{projectId}/board-columns/{boardColumnId}/task-order")
+    @PreAuthorize("hasRole('ADMIN') or @projectSecurity.canEditTasksByEmail(#projectId, authentication.name)")
+    public ResponseEntity<Void> reorderTasksInColumn(
+            @PathVariable Long projectId,
+            @PathVariable Long boardColumnId,
+            @RequestBody TaskOrderUpdateDTO dto
+    ) {
+        taskService.reorderTasksInColumn(projectId, boardColumnId, dto.getTaskIds());
+        return ResponseEntity.noContent().build();
+    }
+
+    @PatchMapping("/api/v1/projects/{projectId}/task-order/move-between-columns")
+    @PreAuthorize("hasRole('ADMIN') or @projectSecurity.canEditTasksByEmail(#projectId, authentication.name)")
+    public ResponseEntity<Void> moveTaskBetweenColumns(
+            @PathVariable Long projectId,
+            @RequestBody TaskMoveBetweenColumnsDTO dto
+    ) {
+        taskService.moveTaskBetweenColumns(
+                projectId,
+                dto.getSourceColumnId(),
+                dto.getTargetColumnId(),
+                dto.getSourceTaskIds(),
+                dto.getTargetTaskIds()
+        );
+        return ResponseEntity.noContent().build();
+    }
+
+    @PatchMapping("/api/v1/tasks/{taskId}/favorite")
+    @PreAuthorize("hasRole('ADMIN') or @taskSecurity.canViewTaskByEmail(#taskId, authentication.name)")
+    public ResponseEntity<TaskResponseDTO> setFavorite(
+            @PathVariable Long taskId,
+            @RequestParam boolean favorite
+    ) {
+        return ResponseEntity.ok(taskService.setFavorite(taskId, favorite));
     }
 
     @Operation(summary = "Task archivieren")

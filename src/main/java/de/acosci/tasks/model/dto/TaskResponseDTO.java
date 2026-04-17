@@ -14,6 +14,8 @@ public class TaskResponseDTO {
     private String description;
     private Long projectId;
     private Long boardColumnId;
+    private Integer position;
+    private boolean favorite;
     private Long creatorId;
     private ProjectSummaryDTO project;
     private BoardColumnSummaryDTO boardColumn;

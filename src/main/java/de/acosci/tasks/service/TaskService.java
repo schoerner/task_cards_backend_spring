@@ -11,18 +11,40 @@ import java.util.List;
  * Service for task lifecycle and kanban operations.
  */
 public interface TaskService {
+
     List<TaskResponseDTO> getTasksByProject(Long projectId);
+
     TaskResponseDTO getTaskById(Long taskId);
+
     TaskResponseDTO createTask(TaskCreateDTO dto);
+
     TaskResponseDTO updateTask(Long taskId, TaskUpdateDTO dto);
-    TaskResponseDTO moveTask(Long taskId, Long boardColumnId);
+
+    void reorderTasksInColumn(Long projectId, Long boardColumnId, List<Long> orderedTaskIds);
+
+    void moveTaskBetweenColumns(Long projectId,
+                                Long sourceColumnId,
+                                Long targetColumnId,
+                                List<Long> sourceTaskIds,
+                                List<Long> targetTaskIds);
+
     TaskResponseDTO archiveTask(Long taskId);
+
     TaskResponseDTO restoreTask(Long taskId);
+
     void deleteTask(Long taskId);
 
     List<TimeRecordResponseDTO> getTimeRecords(Long taskId);
+
     TimeRecordResponseDTO getActiveTimeRecord(Long taskId);
+
     boolean isActive(Long taskId);
+
     TaskResponseDTO startTimeTracking(Long taskId);
+
     TaskResponseDTO stopTimeTracking(Long taskId);
+
+    TaskResponseDTO setFavorite(Long taskId, boolean favorite);
+
+    List<TaskResponseDTO> getFocusTasks(Integer limit);
 }

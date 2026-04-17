@@ -1,0 +1,105 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="
+          http://www.liquibase.org/xml/ns/dbchangelog
+          https://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.27.xsd">
+
+    <changeSet id="0.2.1-add-task-position" author="chatgpt">
+        <addColumn tableName="tasks">
+            <column name="position" type="INT" defaultValueNumeric="0">
+                <constraints nullable="false"/>
+            </column>
+        </addColumn>
+    </changeSet>
+
+    <changeSet id="0.2.2-backfill-task-position" author="chatgpt">
+        <sql>
+            UPDATE tasks t
+                JOIN (
+                SELECT id,
+                ROW_NUMBER() OVER (
+                PARTITION BY board_column_id
+                ORDER BY created_at, id
+                ) - 1 AS new_position
+                FROM tasks
+                ) ordered_tasks
+            ON ordered_tasks.id = t.id
+                SET t.position = ordered_tasks.new_position;
+        </sql>
+    </changeSet>
+
+    <changeSet id="0.2.3-add-time-record-user" author="chatgpt">
+        <addColumn tableName="time_records">
+            <column name="user_id" type="BIGINT"/>
+        </addColumn>
+
+        <addForeignKeyConstraint
+                baseTableName="time_records"
+                baseColumnNames="user_id"
+                referencedTableName="users"
+                referencedColumnNames="id"
+                constraintName="fk_time_records_user"/>
+
+        <createIndex tableName="time_records" indexName="idx_time_records_user_time_end">
+            <column name="user_id"/>
+            <column name="time_end"/>
+        </createIndex>
+    </changeSet>
+
+    <changeSet id="0.2.4-backfill-time-record-user" author="chatgpt">
+        <sql>
+            UPDATE time_records
+            SET user_id = 3
+            WHERE user_id IS NULL;
+        </sql>
+    </changeSet>
+
+    <changeSet id="0.2.5-close-open-time-records-without-end" author="chatgpt">
+        <sql>
+            UPDATE time_records
+            SET time_end = time_start
+            WHERE time_end IS NULL;
+        </sql>
+    </changeSet>
+
+    <changeSet id="0.2.6-create-user-favorite-tasks" author="chatgpt">
+        <createTable tableName="user_favorite_tasks">
+            <column name="user_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="task_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_at" type="TIMESTAMP"
+                    defaultValueComputed="CURRENT_TIMESTAMP">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <addPrimaryKey
+                tableName="user_favorite_tasks"
+                columnNames="user_id, task_id"
+                constraintName="pk_user_favorite_tasks"/>
+
+        <addForeignKeyConstraint
+                baseTableName="user_favorite_tasks"
+                baseColumnNames="user_id"
+                referencedTableName="users"
+                referencedColumnNames="id"
+                constraintName="fk_user_favorite_tasks_user"/>
+
+        <addForeignKeyConstraint
+                baseTableName="user_favorite_tasks"
+                baseColumnNames="task_id"
+                referencedTableName="tasks"
+                referencedColumnNames="id"
+                constraintName="fk_user_favorite_tasks_task"/>
+
+        <createIndex tableName="user_favorite_tasks" indexName="idx_user_favorite_tasks_task">
+            <column name="task_id"/>
+        </createIndex>
+    </changeSet>
+
+</databaseChangeLog>

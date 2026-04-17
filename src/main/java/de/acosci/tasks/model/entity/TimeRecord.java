@@ -37,8 +37,14 @@ public class TimeRecord {
     @OnDelete(action = OnDeleteAction.CASCADE)
     private Task task;
 
-    public TimeRecord(Task task) {
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_id")
+    @JsonIgnore
+    private User user;
+
+    public TimeRecord(Task task, User user) {
         this.task = task;
+        this.user = user;
         this.timeStart = new Date();
         this.timeEnd = null;
     }
