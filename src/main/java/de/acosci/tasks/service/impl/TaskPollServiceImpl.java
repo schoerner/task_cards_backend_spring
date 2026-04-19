@@ -29,6 +29,16 @@ public class TaskPollServiceImpl implements TaskPollService {
     private final TaskPollParticipantRepository participantRepository;
     private final TaskPollAvailabilityRepository availabilityRepository;
 
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<TaskPollOwnerSummaryDTO> getOwnedPolls() {
+        User currentUser = getCurrentUser();
+        return taskPollRepository.findAllByCreatedBy_IdOrderByUpdatedAtDesc(currentUser.getId()).stream()
+                .map(this::toOwnerSummaryDto)
+                .toList();
+    }
+
     @Override
     @Transactional(readOnly = true)
     public TaskPollResponseDTO getPollByTask(Long taskId) {
@@ -233,6 +243,28 @@ public class TaskPollServiceImpl implements TaskPollService {
                 participant.getAvailabilities().add(availability);
             }
         }
+    }
+
+    private TaskPollOwnerSummaryDTO toOwnerSummaryDto(TaskPoll poll) {
+        TaskPollOwnerSummaryDTO dto = new TaskPollOwnerSummaryDTO();
+        dto.setId(poll.getId());
+        dto.setTaskId(poll.getTask() != null ? poll.getTask().getId() : null);
+        dto.setTaskTitle(poll.getTask() != null ? poll.getTask().getTitle() : null);
+        dto.setProjectId(poll.getTask() != null && poll.getTask().getProject() != null ? poll.getTask().getProject().getId() : null);
+        dto.setProjectName(poll.getTask() != null && poll.getTask().getProject() != null ? poll.getTask().getProject().getName() : null);
+        dto.setTitle(poll.getTitle());
+        dto.setStatus(poll.getStatus());
+        dto.setStartDate(poll.getStartDate());
+        dto.setEndDate(poll.getEndDate());
+        dto.setSlotMinutes(poll.getSlotMinutes());
+        dto.setParticipantCount(poll.getParticipants() != null ? poll.getParticipants().size() : 0);
+        dto.setRespondedParticipantCount((int) poll.getParticipants().stream()
+                .filter(participant -> participant.getRespondedAt() != null)
+                .count());
+        dto.setFinalizedStartAt(poll.getFinalizedStartAt());
+        dto.setFinalizedEndAt(poll.getFinalizedEndAt());
+        dto.setUpdatedAt(poll.getUpdatedAt());
+        return dto;
     }
 
     private TaskPollResponseDTO toOwnerDto(TaskPoll poll, User currentUser) {
