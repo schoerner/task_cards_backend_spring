@@ -103,7 +103,7 @@ class ProjectMemberRestControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].projectId").value(2))
                 .andExpect(jsonPath("$[0].userId").value(1))
-                .andExpect(jsonPath("$[0].email").value("admin@example.com"))
+                .andExpect(jsonPath("$[0].contactEmail").value("admin@example.com"))
                 .andExpect(jsonPath("$[0].role").value("OWNER"));
     }
 

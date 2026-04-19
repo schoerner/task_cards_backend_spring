@@ -52,6 +52,7 @@ public class SecurityConfiguration {
                                 "/api/api-docs/**"
                         ).permitAll()
                         .requestMatchers("/api/v1/calendar/feed/**").permitAll()
+                        .requestMatchers("/api/public/v1/task-polls/respond/**").permitAll()
                         .requestMatchers("/api/v1/auth/signup").hasRole("ADMIN")
                         .requestMatchers("/api/v1/admin/**").hasRole("ADMIN")
                         .requestMatchers("/api/v1/**").hasAnyRole("USER", "ADMIN")

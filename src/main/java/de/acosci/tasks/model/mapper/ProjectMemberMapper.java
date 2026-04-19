@@ -2,6 +2,7 @@ package de.acosci.tasks.model.mapper;
 
 import de.acosci.tasks.model.dto.ProjectMemberResponseDTO;
 import de.acosci.tasks.model.entity.ProjectMember;
+import de.acosci.tasks.model.entity.User;
 
 public final class ProjectMemberMapper {
 
@@ -9,22 +10,64 @@ public final class ProjectMemberMapper {
     }
 
     public static ProjectMemberResponseDTO toResponseDTO(ProjectMember member) {
-        if (member == null) {
+        ProjectMemberResponseDTO dto = new ProjectMemberResponseDTO();
+        dto.setProjectId(member.getProject().getId());
+        dto.setUserId(member.getUser().getId());
+        dto.setName(resolveMemberName(member.getUser()));
+        dto.setContactEmail(resolveMemberContactEmail(member.getUser()));
+        dto.setRole(member.getRole());
+        dto.setJoinedAt(member.getJoinedAt());
+        return dto;
+    }
+
+    private static String resolveMemberName(User user) {
+        if (user == null) {
             return null;
         }
 
-        ProjectMemberResponseDTO dto = new ProjectMemberResponseDTO();
+        if (user.getProfile() != null) {
+            if (hasText(user.getProfile().getName())) {
+                return user.getProfile().getName();
+            }
+            if (hasText(user.getProfile().getName())) {
+                return user.getProfile().getName();
+            }
+        }
 
-        dto.setProjectId(member.getProject() != null ? member.getProject().getId() : null);
-        dto.setUserId(member.getUser() != null ? member.getUser().getId() : null);
+        String fullName = joinNonBlank(user.getFirstName(), user.getLastName());
+        if (hasText(fullName)) {
+            return fullName;
+        }
 
-        dto.setEmail(member.getUser() != null ? member.getUser().getEmail() : null);
-        dto.setFirstName(member.getUser() != null ? member.getUser().getFirstName() : null);
-        dto.setLastName(member.getUser() != null ? member.getUser().getLastName() : null);
+        return "User " + user.getId();
+    }
 
-        dto.setRole(member.getRole());
-        dto.setJoinedAt(member.getJoinedAt());
+    private static String resolveMemberContactEmail(User user) {
+        if (user == null) {
+            return null;
+        }
 
-        return dto;
+        if (user.getProfile() != null && hasText(user.getProfile().getContactEmail())) {
+            return user.getProfile().getContactEmail();
+        }
+
+        return user.getEmail();
+    }
+
+    private static boolean hasText(String value) {
+        return value != null && !value.trim().isEmpty();
+    }
+
+    private static String joinNonBlank(String... values) {
+        StringBuilder builder = new StringBuilder();
+        for (String value : values) {
+            if (hasText(value)) {
+                if (!builder.isEmpty()) {
+                    builder.append(' ');
+                }
+                builder.append(value.trim());
+            }
+        }
+        return builder.toString();
     }
 }

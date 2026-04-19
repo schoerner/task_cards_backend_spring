@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="
+          http://www.liquibase.org/xml/ns/dbchangelog
+          https://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.27.xsd">
+
+    <changeSet id="0.4.1-task-poll-participant-invitation-token" author="chatgpt">
+        <addColumn tableName="task_poll_participants">
+            <column name="invitation_token" type="VARCHAR(120)"/>
+        </addColumn>
+    </changeSet>
+
+</databaseChangeLog>

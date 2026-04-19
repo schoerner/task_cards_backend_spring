@@ -5,5 +5,7 @@
 
     <include file="version-0.1-initial-schema.xml" relativeToChangelogFile="true" />
     <include file="db/mariadb/version-0.2-task-ordering-favorites-time-record-user.xml"/>
+    <include file="db/mariadb/version-0.3-task-polls.xml"/>
+    <include file="db/mariadb/version-0.4-task-poll-invitation-token.xml"/>
 
 </databaseChangeLog>

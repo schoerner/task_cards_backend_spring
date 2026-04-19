@@ -11,9 +11,8 @@ public class ProjectMemberResponseDTO {
     private Long projectId;
     private Long userId;
 
-    private String email;
-    private String firstName;
-    private String lastName;
+    private String name;
+    private String contactEmail;
 
     private ProjectRole role;
     private OffsetDateTime joinedAt;
